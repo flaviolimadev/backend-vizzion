@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nova indicação registrada | {{app_name}}</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#f0fdf4;font-family:Segoe UI,Arial,Helvetica,sans-serif;color:#0f172a;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f0fdf4;padding:24px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #bbf7d0;">
+            <tr>
+              <td style="padding:24px 32px;background:#22c55e;color:#ffffff;">
+                <h1 style="margin:0;font-size:20px;">{{app_name}}</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <h2 style="margin:0 0 12px 0;font-size:20px;color:#22c55e;">🎉 Nova indicação registrada!</h2>
+                <p style="margin:0 0 16px 0;line-height:1.6;color:#334155;">
+                  Olá {{referrer_name}}, temos uma ótima notícia!
+                </p>
+                <p style="margin:0 0 16px 0;line-height:1.6;color:#334155;">
+                  Uma nova pessoa se cadastrou através do seu link de indicação:
+                </p>
+                
+                <!-- Informações do novo usuário -->
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0;">
+                  <h3 style="margin:0 0 12px 0;font-size:16px;color:#22c55e;">👤 Dados do novo usuário:</h3>
+                  <p style="margin:0 0 8px 0;line-height:1.6;color:#334155;">
+                    <strong>Nome:</strong> {{new_user_name}}
+                  </p>
+                  <p style="margin:0 0 8px 0;line-height:1.6;color:#334155;">
+                    <strong>Email:</strong> {{new_user_email}}
+                  </p>
+                  <p style="margin:0 0 0 0;line-height:1.6;color:#334155;">
+                    <strong>Contato:</strong> {{new_user_contact}}
+                  </p>
+                </div>
+
+                <p style="margin:0 0 16px 0;line-height:1.6;color:#334155;">
+                  Parabéns! Sua rede de indicações está crescendo. Continue compartilhando seu link para ganhar mais indicações.
+                </p>
+                
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px 0;">
+                  <tr>
+                    <td bgcolor="#22c55e" style="border-radius:8px;">
+                      <a href="{{dashboard_url}}" style="display:inline-block;padding:10px 16px;color:#ffffff;text-decoration:none;font-weight:600;">{{cta_label}}</a>
+                    </td>
+                  </tr>
+                </table>
+                
+                <p style="margin:0;line-height:1.6;color:#64748b;font-size:12px;">
+                  Continue compartilhando seu link de indicação para expandir sua rede e ganhar mais comissões!
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px;background:#f0fdf4;color:#22c55e;font-size:12px;">
+                © {{year}} {{app_name}}.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
