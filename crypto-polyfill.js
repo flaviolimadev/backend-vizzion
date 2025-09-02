@@ -1,14 +1,14 @@
 // Crypto polyfill for Node.js environments that don't have crypto module
-if (typeof globalThis.crypto === 'undefined') {
-  const crypto = require('crypto');
-  globalThis.crypto = crypto;
-}
+const crypto = require('crypto');
 
 // Ensure crypto.randomUUID is available
-if (!globalThis.crypto.randomUUID) {
-  globalThis.crypto.randomUUID = function() {
-    return require('crypto').randomUUID();
+if (!crypto.randomUUID) {
+  crypto.randomUUID = function() {
+    return crypto.randomBytes(16).toString('hex');
   };
 }
 
-module.exports = globalThis.crypto;
+// Make crypto available globally
+globalThis.crypto = crypto;
+
+module.exports = crypto;

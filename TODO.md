@@ -12,3 +12,10 @@
 
 - [ ] Test production build
 - [ ] Verify crypto polyfill works
+
+## Recent Fixes
+
+- [x] Simplified crypto polyfill for Docker compatibility
+- [x] Removed "type": "module" from package.json
+- [x] Created docker-entrypoint.js for better Docker support
+- [x] Made migrations non-blocking for production startup

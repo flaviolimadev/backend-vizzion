@@ -19,8 +19,8 @@ async function bootstrap() {
   SwaggerModule.setup('/docs', app, SwaggerModule.createDocument(app, swagger));
 
   // 👇 executa migrations programaticamente
-  const dataSource = app.get(DataSource);
   try {
+    const dataSource = app.get(DataSource);
     const ran = await dataSource.runMigrations();
     if (ran.length) {
       console.log(`Migrations aplicadas: ${ran.map(m => m.name).join(', ')}`);
@@ -29,7 +29,8 @@ async function bootstrap() {
     }
   } catch (err) {
     console.error('Falha ao executar migrations:', err);
-    process.exit(1); // opcional: falhar o boot se migration falhar
+    // Não falhar o boot se migration falhar - apenas logar o erro
+    console.log('Continuando sem executar migrations...');
   }
 
   await app.listen(process.env.PORT || 3000);
