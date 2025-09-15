@@ -5,7 +5,10 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     Index,
+    ManyToOne,
+    JoinColumn,
   } from 'typeorm';
+  import { Plano } from './plano.entity';
   
   @Entity('users')
   export class User {
@@ -53,6 +56,22 @@ import {
 
   @Column({ type: 'int', default: 0 })
   plano: number;
+
+  @ManyToOne(() => Plano, { nullable: true })
+  @JoinColumn({ name: 'plano' })
+  planoObj?: Plano;
+
+  @Column({ type: 'varchar', length: 20, default: 'manual' })
+  trading_mode: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  balance_invest: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  balance: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  balance_block: number;
 
   @CreateDateColumn()
   created_at: Date;

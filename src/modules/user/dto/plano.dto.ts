@@ -20,4 +20,5 @@ export class UserPlanoResponseDto {
   temLicenca: boolean;
   dataCompra?: string;
   proximoUpgrade?: number;
+  nomePlano?: string;
 }

@@ -22,7 +22,7 @@ export class PlanoController {
   @ApiOperation({ summary: 'Obter plano atual do usuário' })
   @ApiResponse({ status: 200, description: 'Plano atual do usuário', type: UserPlanoResponseDto })
   async getMeuPlano(@Request() req): Promise<UserPlanoResponseDto> {
-    return this.planoService.getUserPlano(req.user.id);
+    return this.planoService.getUserPlano(req.user.sub);
   }
 
   @Post('upgrade')
@@ -34,6 +34,8 @@ export class PlanoController {
     @Request() req,
     @Body() upgradePlanoDto: UpgradePlanoDto
   ): Promise<{ success: boolean; message: string }> {
-    return this.planoService.upgradePlano(req.user.id, upgradePlanoDto.novoPlano);
+    return this.planoService.upgradePlano(req.user.sub, upgradePlanoDto.novoPlano);
   }
+
+
 }

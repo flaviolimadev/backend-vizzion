@@ -223,7 +223,7 @@ export class UserService {
   async getMe(userId: string) {
     const user = await this.repo.findOne({ 
       where: { id: userId }, 
-      select: ['id', 'nome', 'sobrenome', 'email', 'contato', 'avatar', 'referred_at'] 
+      select: ['id', 'nome', 'sobrenome', 'email', 'contato', 'avatar', 'referred_at', 'plano', 'balance_invest', 'balance', 'balance_block'] 
     });
     if (!user) throw new NotFoundException('Usuário não encontrado');
     
@@ -236,6 +236,10 @@ export class UserService {
       contato: user.contato,
       avatar: user.avatar ? await this.avatarService.getAvatarDisplayUrl(user.avatar) : null,
       referred_at: user.referred_at,
+      plano: user.plano,
+      balance_invest: Number(user.balance_invest),
+      balance: Number(user.balance),
+      balance_block: Number(user.balance_block),
     };
     
     return userData;

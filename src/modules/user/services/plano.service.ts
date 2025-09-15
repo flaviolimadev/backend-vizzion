@@ -2,31 +2,25 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { PlanoResponseDto, UserPlanoResponseDto } from '../dto/plano.dto';
+import { Plano } from '../entities/plano.entity';
+import { PlanoResponseDto, UserPlanoResponseDto, UpgradePlanoDto } from '../dto/plano.dto';
 
 @Injectable()
 export class PlanoService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Plano)
+    private planoRepository: Repository<Plano>,
   ) {}
 
-  // Lista de planos disponíveis
-  private readonly planosDisponiveis = [
-    { id: 1, valor: 4, popular: false, maxDeposito: 20, descricao: 'Plano Básico' },
-    { id: 2, valor: 20, popular: false, maxDeposito: 100, descricao: 'Plano Iniciante' },
-    { id: 3, valor: 100, popular: false, maxDeposito: 500, descricao: 'Plano Intermediário' },
-    { id: 4, valor: 500, popular: true, maxDeposito: 2500, descricao: 'Plano Avançado' },
-    { id: 5, valor: 1000, popular: false, maxDeposito: 5000, descricao: 'Plano Profissional' },
-    { id: 6, valor: 2000, popular: false, maxDeposito: 10000, descricao: 'Plano Expert' },
-    { id: 7, valor: 5000, popular: false, maxDeposito: 25000, descricao: 'Plano Master' },
-    { id: 8, valor: 10000, popular: false, maxDeposito: 50000, descricao: 'Plano Elite' },
-    { id: 9, valor: 15000, popular: false, maxDeposito: 75000, descricao: 'Plano Premium' },
-    { id: 10, valor: 20000, popular: false, maxDeposito: 100000, descricao: 'Plano VIP' },
-  ];
-
   async getPlanosDisponiveis(): Promise<PlanoResponseDto[]> {
-    return this.planosDisponiveis.map(plano => ({
+    const planos = await this.planoRepository.find({
+      where: { ativo: true },
+      order: { ordem: 'ASC' },
+    });
+
+    return planos.map(plano => ({
       id: plano.id,
       valor: plano.valor,
       popular: plano.popular,
@@ -34,6 +28,8 @@ export class PlanoService {
       descricao: plano.descricao,
     }));
   }
+
+
 
   async getUserPlano(userId: string): Promise<UserPlanoResponseDto> {
     const user = await this.userRepository.findOne({
@@ -45,23 +41,45 @@ export class PlanoService {
       throw new Error('Usuário não encontrado');
     }
 
-    const planoAtual = user.plano;
-    const temLicenca = planoAtual > 0;
+    const planoId = user.plano;
+    const temLicenca = planoId > 0;
     
-    // Encontrar o próximo upgrade disponível
-    const proximoUpgrade = this.planosDisponiveis.find(
-      plano => plano.valor > planoAtual
-    )?.valor;
+    let planoAtual = 0;
+    let proximoUpgrade: number | undefined;
+    let nomePlano: string | undefined;
+
+    if (temLicenca) {
+      // Buscar o plano atual
+      const planoAtualObj = await this.planoRepository.findOne({
+        where: { id: planoId, ativo: true }
+      });
+      
+      if (planoAtualObj) {
+        planoAtual = planoAtualObj.valor;
+        nomePlano = planoAtualObj.descricao;
+        
+        // Encontrar o próximo upgrade disponível
+        const planosAtivos = await this.planoRepository.find({
+          where: { ativo: true },
+          order: { ordem: 'ASC' },
+        });
+        const proximoPlano = planosAtivos.find(
+          plano => plano.ordem > planoAtualObj.ordem
+        );
+        proximoUpgrade = proximoPlano?.valor;
+      }
+    }
 
     return {
       planoAtual,
       temLicenca,
       dataCompra: temLicenca ? user.created_at.toISOString() : undefined,
       proximoUpgrade,
+      nomePlano,
     };
   }
 
-  async upgradePlano(userId: string, novoPlano: number): Promise<{ success: boolean; message: string }> {
+  async upgradePlano(userId: string, novoPlanoValor: number): Promise<{ success: boolean; message: string }> {
     const user = await this.userRepository.findOne({
       where: { id: userId }
     });
@@ -71,26 +89,80 @@ export class PlanoService {
     }
 
     // Verificar se o plano existe
-    const planoExiste = this.planosDisponiveis.find(p => p.valor === novoPlano);
-    if (!planoExiste) {
+    const novoPlano = await this.planoRepository.findOne({
+      where: { valor: novoPlanoValor, ativo: true }
+    });
+    if (!novoPlano) {
       throw new Error('Plano não encontrado');
     }
 
-    // Verificar se é um upgrade válido
-    if (novoPlano <= user.plano) {
-      throw new Error('Novo plano deve ser superior ao plano atual');
+    // Se o usuário já tem um plano, verificar se é um upgrade válido
+    if (user.plano > 0) {
+      const planoAtual = await this.planoRepository.findOne({
+        where: { id: user.plano, ativo: true }
+      });
+      
+      if (planoAtual && novoPlano.ordem <= planoAtual.ordem) {
+        throw new Error('Novo plano deve ser superior ao plano atual');
+      }
     }
 
-    // Atualizar o plano do usuário
-    await this.userRepository.update(userId, { plano: novoPlano });
+    // Atualizar o plano do usuário (salvar o ID do plano)
+    await this.userRepository.update(userId, { plano: novoPlano.id });
 
     return {
       success: true,
-      message: `Plano atualizado para US$ ${novoPlano.toLocaleString()} com sucesso!`
+      message: `Plano atualizado para R$ ${(novoPlanoValor * 5).toLocaleString()} com sucesso!`
     };
   }
 
-  getPlanoInfo(valor: number) {
-    return this.planosDisponiveis.find(p => p.valor === valor);
+  async getPlanoInfo(valor: number) {
+    return await this.planoRepository.findOne({
+      where: { valor, ativo: true }
+    });
+  }
+
+  async getPlanoById(id: number) {
+    return await this.planoRepository.findOne({
+      where: { id, ativo: true }
+    });
+  }
+
+  // Método alternativo usando relacionamento
+  async getUserPlanoWithRelation(userId: string): Promise<UserPlanoResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['planoObj'],
+      select: ['plano', 'created_at', 'planoObj']
+    });
+
+    if (!user) {
+      throw new Error('Usuário não encontrado');
+    }
+
+    const temLicenca = user.plano > 0;
+    let planoAtual = 0;
+    let proximoUpgrade: number | undefined;
+
+    if (temLicenca && user.planoObj) {
+      planoAtual = user.planoObj.valor;
+      
+      // Encontrar o próximo upgrade disponível
+      const planosAtivos = await this.planoRepository.find({
+        where: { ativo: true },
+        order: { ordem: 'ASC' },
+      });
+      const proximoPlano = planosAtivos.find(
+        plano => plano.ordem > user.planoObj!.ordem
+      );
+      proximoUpgrade = proximoPlano?.valor;
+    }
+
+    return {
+      planoAtual,
+      temLicenca,
+      dataCompra: temLicenca ? user.created_at.toISOString() : undefined,
+      proximoUpgrade,
+    };
   }
 }
