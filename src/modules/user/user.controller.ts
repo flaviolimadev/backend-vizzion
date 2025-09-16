@@ -89,7 +89,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('avatar'))
   @ApiConsumes('multipart/form-data')
-  async uploadAvatar(@Req() req: any, @UploadedFile() file: Express.Multer.File) {
+  async uploadAvatar(@Req() req: any, @UploadedFile() file: any) {
     if (!file) {
       throw new BadRequestException('Nenhum arquivo enviado');
     }

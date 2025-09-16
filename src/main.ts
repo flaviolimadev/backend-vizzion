@@ -18,7 +18,9 @@ async function bootstrap() {
   const swagger = new DocumentBuilder().setTitle('Base Backend').setVersion('1.0.0').build();
   SwaggerModule.setup('/docs', app, SwaggerModule.createDocument(app, swagger));
 
-  // 👇 executa migrations programaticamente
+  // 👇 executa migrations programaticamente - DESABILITADO TEMPORARIAMENTE
+  console.log('Pulando migrations por enquanto...');
+  /*
   try {
     const dataSource = app.get(DataSource);
     const ran = await dataSource.runMigrations();
@@ -32,6 +34,7 @@ async function bootstrap() {
     // Não falhar o boot se migration falhar - apenas logar o erro
     console.log('Continuando sem executar migrations...');
   }
+  */
 
   await app.listen(process.env.PORT || 3000);
 }

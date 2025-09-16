@@ -70,7 +70,7 @@ export class AvatarService {
     await this.s3Client.send(command);
   }
 
-  async uploadAvatarDirectly(userId: string, file: Express.Multer.File): Promise<{ key: string; url: string }> {
+  async uploadAvatarDirectly(userId: string, file: any): Promise<{ key: string; url: string }> {
     // Validar tipo de arquivo
     if (!this.isValidImageType(file.mimetype)) {
       throw new BadRequestException('Tipo de arquivo não suportado. Use JPG, PNG ou GIF.');

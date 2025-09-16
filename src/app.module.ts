@@ -8,6 +8,7 @@ import { envValidationSchema } from './config/validation.schema';
 import { AuthModule } from './modules/auth/auth.module';
 import { MailModule } from './modules/mail/mail.module';
 import { UserModule } from './modules/user/user.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -16,33 +17,26 @@ import { UserModule } from './modules/user/user.module';
       load: [appConfig, dbConfig],
       // validationSchema: envValidationSchema,
     }),
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const db = config.get('db') as any;
-        return {
-          type: 'postgres',
-          host: db.host,
-          port: db.port,
-          username: db.username,
-          password: db.password,
-          database: db.database,
-          autoLoadEntities: true,
-          synchronize: false,                // nunca em prod
-          logging: false,
-
-          // 👇 importante: caminhos das migrations
-          migrations: [
-            join(__dirname, 'database', 'migrations', '*.{ts,js}'),
-          ],
-          migrationsRun: true,               // 👈 executa ao iniciar
-        };
-      },
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432'),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+      autoLoadEntities: true,
+      synchronize: false,
+      logging: false,
+      migrations: [
+        join(__dirname, 'database', 'migrations', '*.{ts,js}'),
+      ],
+      migrationsRun: false, // Desabilitado temporariamente
     }),
     // ... seus módulos
     AuthModule,
     UserModule,
     MailModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
