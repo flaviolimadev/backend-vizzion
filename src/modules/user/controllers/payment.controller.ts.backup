@@ -1,0 +1,206 @@
+import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsPositive, Min, IsEnum, IsOptional, IsString, IsObject, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { PaymentService } from '../services/payment.service';
+import { PaymentMethod } from '../entities/pagamento.entity';
+import { ConfigService } from '@nestjs/config';
+
+class CustomerDto {
+  @ApiProperty({ description: 'Nome do cliente' })
+  @IsString()
+  name: string;
+
+  @ApiProperty({ description: 'Email do cliente' })
+  @IsString()
+  email: string;
+
+  @ApiProperty({ description: 'Telefone do cliente' })
+  @IsString()
+  phone: string;
+
+  @ApiProperty({ description: 'Tipo de documento' })
+  @IsString()
+  documentType: string;
+
+  @ApiProperty({ description: 'Número do documento' })
+  @IsString()
+  document: string;
+}
+
+export class CreatePaymentDto {
+  @ApiProperty({ 
+    description: 'Valor em centavos', 
+    example: 10000,
+    minimum: 100
+  })
+  @IsNumber({}, { message: 'Valor deve ser um número' })
+  @IsPositive({ message: 'Valor deve ser positivo' })
+  @Min(100, { message: 'Valor mínimo é R$ 1,00 (100 centavos)' })
+  amount: number;
+
+  @ApiProperty({ 
+    description: 'Método de pagamento', 
+    enum: PaymentMethod,
+    example: PaymentMethod.PIX
+  })
+  @IsEnum(PaymentMethod, { message: 'Método de pagamento inválido' })
+  method: PaymentMethod;
+
+  @ApiProperty({ 
+    description: 'Descrição do pagamento', 
+    required: false,
+    example: 'Depósito para investimento'
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({ 
+    description: 'Dados do cliente', 
+    required: false,
+    type: CustomerDto
+  })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CustomerDto)
+  customer?: CustomerDto;
+}
+
+@ApiTags('Payments')
+@Controller('payments')
+export class PaymentController {
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly configService: ConfigService
+  ) {}
+
+  @Post('create')
+  @ApiOperation({ summary: 'Criar pagamento (sem autenticação)' })
+  @ApiResponse({ status: 201, description: 'Pagamento criado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  async createPayment(@Body() createPaymentDto: CreatePaymentDto) {
+    console.log('🚀 NOVA IMPLEMENTAÇÃO - Teste direto da VizzionPay API');
+    console.log('📊 Dados recebidos:', JSON.stringify(createPaymentDto, null, 2));
+    
+    try {
+      const apiKey = this.configService.get<string>('PAYMENT_API_KEY') || '';
+      const apiSecret = this.configService.get<string>('PAYMENT_API_SECRET') || '';
+      const baseUrl = 'https://app.vizzionpay.com/api/v1';
+      
+      console.log('🔑 API Key:', apiKey ? 'Configurada' : 'Não configurada');
+      console.log('🔑 API Secret:', apiSecret ? 'Configurada' : 'Não configurada');
+      
+      const identifier = `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const amountInReais = createPaymentDto.amount / 100;
+      
+      const body = {
+        identifier: identifier,
+        clientIdentifier: identifier,
+        callbackUrl: "https://backend.iprobet.click/api",
+        amount: amountInReais,
+        discountFeeOfReceiver: false,
+        client: {
+          name: createPaymentDto.customer?.name || "Cliente",
+          email: createPaymentDto.customer?.email || "cliente@email.com",
+          phone: createPaymentDto.customer?.phone || "11999999999",
+          documentType: "CPF",
+          document: createPaymentDto.customer?.document || "000.000.000-00"
+        },
+        pix: {
+          type: "email",
+          key: createPaymentDto.customer?.email || "cliente@email.com"
+        },
+        owner: {
+          ip: "108.181.224.233",
+          name: createPaymentDto.customer?.name || "Cliente",
+          document: {
+            type: "cpf",
+            number: createPaymentDto.customer?.document || "000.000.000-00"
+          }
+        }
+      };
+
+      console.log('📤 Enviando dados para VizzionPay:', JSON.stringify(body, null, 2));
+
+      const response = await fetch(`${baseUrl}/gateway/pix/receive`, {
+        method: 'POST',
+        headers: {
+          'x-public-key': apiKey,
+          'x-secret-key': apiSecret,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      console.log('📥 Status da resposta:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erro da API VizzionPay:', errorText);
+        return {
+          status: false,
+          error: `API Error: ${response.status} ${response.statusText} - ${errorText}`
+        };
+      }
+
+      const data = await response.json();
+      console.log('✅ Resposta da API recebida:', JSON.stringify(data, null, 2));
+      
+      const pixCode = data.pix?.code || '';
+      const qrCodeUrl = pixCode ? `https://quickchart.io/qr?text=${encodeURIComponent(pixCode)}&size=300` : '';
+      
+      return {
+        status: true,
+        data: {
+          transactionId: data.transactionId,
+          status: data.status,
+          amount: createPaymentDto.amount,
+          method: createPaymentDto.method,
+          pix: {
+            qrcode: '',
+            qrcodeUrl: qrCodeUrl,
+            copyPaste: pixCode,
+            expirationDate: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+          }
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Erro:', error);
+      return {
+        status: false,
+        error: error.message || 'Erro interno'
+      };
+    }
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obter pagamento por ID' })
+  @ApiResponse({ status: 200, description: 'Pagamento encontrado' })
+  @ApiResponse({ status: 404, description: 'Pagamento não encontrado' })
+  async getPayment(@Param('id') id: string) {
+    return this.paymentService.getPayment(id);
+  }
+
+  @Get('user/payments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obter pagamentos do usuário' })
+  @ApiResponse({ status: 200, description: 'Lista de pagamentos' })
+  async getUserPayments(@Request() req) {
+    return this.paymentService.getUserPayments(req.user.sub);
+  }
+
+  @Post('callback')
+  @ApiOperation({ summary: 'Callback da VizzionPay' })
+  @ApiResponse({ status: 200, description: 'Callback processado' })
+  async handleCallback(@Body() callbackData: any) {
+    console.log('📞 Callback recebido da VizzionPay:', callbackData);
+    return { status: 'received' };
+  }
+}

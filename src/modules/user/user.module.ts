@@ -4,6 +4,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { User } from './entities/user.entity';
 import { Plano } from './entities/plano.entity';
 import { YieldSchedule } from './entities/yield-schedule.entity';
+import { Pagamento } from './entities/pagamento.entity';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { PlanoController } from './controllers/plano.controller';
@@ -15,12 +16,14 @@ import { YieldController } from './controllers/yield.controller';
 import { YieldService } from './services/yield.service';
 import { WalletController } from './controllers/wallet.controller';
 import { WalletService } from './services/wallet.service';
+import { PaymentController } from './controllers/payment.controller';
+import { PaymentService } from './services/payment.service';
 import { ConfigModule } from '@nestjs/config';
 import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Plano, YieldSchedule]), 
+    TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento]), 
     ConfigModule, 
     MailModule,
     MulterModule.register({
@@ -30,8 +33,8 @@ import { MailModule } from '../mail/mail.module';
       },
     }),
   ],
-  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController],
-  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService],
+  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController],
+  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService],
   exports: [TypeOrmModule],
 })
 export class UserModule {}

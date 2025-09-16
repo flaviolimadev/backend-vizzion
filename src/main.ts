@@ -8,12 +8,12 @@ import { DataSource } from 'typeorm';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use(helmet());
+  // app.use(helmet());
   app.enableCors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
   });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const swagger = new DocumentBuilder().setTitle('Base Backend').setVersion('1.0.0').build();
   SwaggerModule.setup('/docs', app, SwaggerModule.createDocument(app, swagger));

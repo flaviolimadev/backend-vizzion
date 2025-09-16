@@ -1,0 +1,230 @@
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { Pagamento, PaymentMethod, PaymentStatus } from '../entities/pagamento.entity';
+import { User } from '../entities/user.entity';
+
+interface CreatePaymentDto {
+  amount: number;
+  method: PaymentMethod;
+  description?: string;
+  customer?: {
+    name: string;
+    email: string;
+    phone: string;
+    documentType: string;
+    document: string;
+  };
+}
+
+@Injectable()
+export class PaymentService {
+  private readonly apiKey: string;
+  private readonly apiSecret: string;
+  private readonly baseUrl: string;
+
+  constructor(
+    @InjectRepository(Pagamento)
+    private pagamentoRepository: Repository<Pagamento>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private configService: ConfigService,
+  ) {
+    this.apiKey = this.configService.get<string>('PAYMENT_API_KEY') || '';
+    this.apiSecret = this.configService.get<string>('PAYMENT_API_SECRET') || '';
+    this.baseUrl = this.configService.get<string>('PAYMENT_API_URL') || 'https://app.vizzionpay.com/api/v1';
+  }
+
+  async createPayment(userId: string, createPaymentDto: CreatePaymentDto): Promise<any> {
+    try {
+      console.log('🚀 Usando API real da VizzionPay');
+      
+      const txid = `prod_${Date.now()}`;
+      const pagamento = this.pagamentoRepository.create({
+        user_id: userId,
+        method: createPaymentDto.method,
+        txid: txid,
+        status: PaymentStatus.PENDING,
+        value: createPaymentDto.amount,
+        description: createPaymentDto.description,
+      });
+      const savedPagamento = await this.pagamentoRepository.save(pagamento);
+
+      const paymentResponse = await this.callVizzionPayAPI(createPaymentDto);
+      
+      if (paymentResponse.status && paymentResponse.data) {
+        await this.pagamentoRepository.update(savedPagamento.id, {
+          txid: paymentResponse.data.transactionId,
+          pix_code: paymentResponse.data.pix?.copyPaste || null,
+          pix_qrcode_url: paymentResponse.data.pix?.qrcodeUrl || null,
+          pix_expiration: paymentResponse.data.pix?.expirationDate ? new Date(paymentResponse.data.pix.expirationDate) : null,
+        });
+
+        return {
+          status: true,
+          data: {
+            id: savedPagamento.id,
+            status: paymentResponse.data.status,
+            amount: createPaymentDto.amount,
+            method: createPaymentDto.method,
+            pix: paymentResponse.data.pix,
+            createdAt: savedPagamento.created_at,
+            txid: paymentResponse.data.transactionId
+          }
+        };
+      } else {
+        throw new HttpException('Erro na API de pagamento', HttpStatus.BAD_REQUEST);
+      }
+
+    } catch (error) {
+      console.error('❌ Erro no PaymentService:', error);
+      throw new HttpException(
+        error.message || 'Erro interno do servidor',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  private async callVizzionPayAPI(paymentData: CreatePaymentDto): Promise<any> {
+    try {
+      console.log('📡 Conectando com VizzionPay API...');
+      
+      const identifier = `vizzionbot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const amountInReais = paymentData.amount / 100;
+      
+      const body = {
+        identifier: identifier,
+        clientIdentifier: identifier,
+        callbackUrl: "https://backend.iprobet.click/api",
+        amount: amountInReais,
+        discountFeeOfReceiver: false,
+        client: {
+          name: paymentData.customer?.name || "Cliente",
+          email: paymentData.customer?.email || "cliente@email.com",
+          phone: paymentData.customer?.phone || "11999999999",
+          documentType: "CPF",
+          document: paymentData.customer?.document || "000.000.000-00"
+        },
+        pix: {
+          type: "email",
+          key: paymentData.customer?.email || "cliente@email.com"
+        },
+        owner: {
+          ip: "108.181.224.233",
+          name: paymentData.customer?.name || "Cliente",
+          document: {
+            type: "cpf",
+            number: paymentData.customer?.document || "000.000.000-00"
+          }
+        }
+      };
+
+      console.log('📤 Enviando dados para VizzionPay:', JSON.stringify(body, null, 2));
+
+      const response = await fetch(`${this.baseUrl}/gateway/pix/receive`, {
+        method: 'POST',
+        headers: {
+          'x-public-key': this.apiKey,
+          'x-secret-key': this.apiSecret,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      console.log('📥 Status da resposta:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erro da API VizzionPay:', errorText);
+        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Resposta da API recebida:', JSON.stringify(data, null, 2));
+      
+      const pixCode = data.pix?.code || '';
+      const qrCodeUrl = pixCode ? `https://quickchart.io/qr?text=${encodeURIComponent(pixCode)}&size=300` : '';
+      
+      return {
+        status: true,
+        data: {
+          transactionId: data.transactionId,
+          status: this.mapVizzionPayStatus(data.status),
+          amount: paymentData.amount,
+          method: paymentData.method,
+          pix: {
+            qrcode: '',
+            qrcodeUrl: qrCodeUrl,
+            copyPaste: pixCode,
+            expirationDate: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+          }
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Erro na chamada da API VizzionPay:', error);
+      throw error;
+    }
+  }
+
+  private mapVizzionPayStatus(vizzionPayStatus: string): string {
+    const statusMap = {
+      'OK': 'CONFIRMED',
+      'PENDING': 'PENDING',
+      'FAILED': 'CANCELLED',
+      'REJECTED': 'CANCELLED',
+      'CANCELED': 'CANCELLED'
+    };
+    
+    return statusMap[vizzionPayStatus] || 'PENDING';
+  }
+
+  async getPayment(id: string): Promise<any> {
+    const pagamento = await this.pagamentoRepository.findOne({ 
+      where: { id },
+      relations: ['user']
+    });
+    
+    if (!pagamento) {
+      throw new HttpException('Pagamento não encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    return {
+      id: pagamento.id,
+      status: pagamento.status,
+      amount: pagamento.value,
+      method: pagamento.method,
+      txid: pagamento.txid,
+      pix: pagamento.pix_code ? {
+        qrcodeUrl: pagamento.pix_qrcode_url,
+        copyPaste: pagamento.pix_code,
+        expirationDate: pagamento.pix_expiration
+      } : null,
+      crypto: pagamento.crypto_address ? {
+        type: pagamento.crypto_type,
+        network: pagamento.crypto_network,
+        address: pagamento.crypto_address
+      } : null,
+      createdAt: pagamento.created_at,
+      updatedAt: pagamento.updated_at
+    };
+  }
+
+  async getUserPayments(userId: string): Promise<any[]> {
+    const pagamentos = await this.pagamentoRepository.find({
+      where: { user_id: userId },
+      order: { created_at: 'DESC' }
+    });
+
+    return pagamentos.map(pagamento => ({
+      id: pagamento.id,
+      status: pagamento.status,
+      amount: pagamento.value,
+      method: pagamento.method,
+      txid: pagamento.txid,
+      description: pagamento.description,
+      createdAt: pagamento.created_at
+    }));
+  }
+}
