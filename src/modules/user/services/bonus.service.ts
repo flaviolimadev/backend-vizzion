@@ -184,7 +184,7 @@ export class BonusService {
         type: bonusType,
         amount: amount,
         description: description,
-        reference_id: payment.id,
+        reference_id: payment.user_id, // ID do usuário que gerou a bonificação
         reference_type: 'payment_bonus',
         status: 1, // COMPLETED
         balance_before: currentBalance,

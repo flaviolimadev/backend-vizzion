@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
+import { Extrato } from './entities/extrato.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ConfigService } from '@nestjs/config';
@@ -14,6 +15,7 @@ import { randomBytes } from 'crypto';
 export class UserService {
   constructor(
     @InjectRepository(User) private repo: Repository<User>,
+    @InjectRepository(Extrato) private extratoRepository: Repository<Extrato>,
     private readonly config: ConfigService,
     private readonly mail: MailService,
     private readonly avatarService: AvatarService,
@@ -115,7 +117,10 @@ export class UserService {
   }
 
   async findOne(id: string) {
-    const user = await this.repo.findOne({ where: { id } });
+    const user = await this.repo.findOne({ 
+      where: { id },
+      select: ['id', 'nome', 'sobrenome', 'email', 'contato', 'avatar']
+    });
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
@@ -486,6 +491,42 @@ export class UserService {
     }
 
     return stats;
+  }
+
+  async getReferralEarnings(userId: string): Promise<any> {
+    // Buscar ganhos de indicação direta (Nível 1)
+    const directEarnings = await this.extratoRepository
+      .createQueryBuilder('extrato')
+      .where('extrato.user_id = :userId', { userId })
+      .andWhere('extrato.type = :type', { type: 'referral' })
+      .andWhere('extrato.description LIKE :pattern', { pattern: '%Nível 1%' })
+      .select('SUM(extrato.amount)', 'total')
+      .getRawOne();
+
+    // Buscar ganhos de indicação indireta (Níveis 2-10)
+    const indirectEarnings = await this.extratoRepository
+      .createQueryBuilder('extrato')
+      .where('extrato.user_id = :userId', { userId })
+      .andWhere('extrato.type = :type', { type: 'referral' })
+      .andWhere('extrato.description NOT LIKE :pattern', { pattern: '%Nível 1%' })
+      .andWhere('extrato.description LIKE :levelPattern', { levelPattern: '%Nível%' })
+      .select('SUM(extrato.amount)', 'total')
+      .getRawOne();
+
+    // Buscar ganhos de bônus (tipo 'bonus')
+    const bonusEarnings = await this.extratoRepository
+      .createQueryBuilder('extrato')
+      .where('extrato.user_id = :userId', { userId })
+      .andWhere('extrato.type = :type', { type: 'bonus' })
+      .select('SUM(extrato.amount)', 'total')
+      .getRawOne();
+
+    return {
+      directEarnings: parseFloat(directEarnings?.total || '0'),
+      indirectEarnings: parseFloat(indirectEarnings?.total || '0'),
+      bonusEarnings: parseFloat(bonusEarnings?.total || '0'),
+      totalReferralEarnings: parseFloat(directEarnings?.total || '0') + parseFloat(indirectEarnings?.total || '0') + parseFloat(bonusEarnings?.total || '0')
+    };
   }
 
   private async getReferralsByLevel(userId: string, level: number): Promise<number> {

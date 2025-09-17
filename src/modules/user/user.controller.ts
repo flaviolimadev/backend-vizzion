@@ -137,4 +137,10 @@ export class UserController {
   async getReferralStatsByLevel(@Req() req: any) {
     return this.service.getReferralStatsByLevel(req.user.sub);
   }
+
+  @Get('me/referral-earnings')
+  @UseGuards(JwtAuthGuard)
+  async getReferralEarnings(@Req() req: any) {
+    return this.service.getReferralEarnings(req.user.sub);
+  }
 }

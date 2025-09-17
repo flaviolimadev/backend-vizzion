@@ -29,21 +29,27 @@ export class WebhookPaymentProcessorService {
     try {
       this.logger.log('🔄 Processando pagamentos via webhooks...');
       
+      // Calcular data limite (24 horas atrás)
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+      
       // Buscar webhooks com evento TRANSACTION_PAID que ainda não foram processados
-      const paidWebhooks = await this.webhookLogRepository.find({
-        where: { 
-          event: 'TRANSACTION_PAID',
-          status: 'processed' // Apenas webhooks já processados pelo webhook service
-        },
-        order: { created_at: 'ASC' }
-      });
+      // e que foram criados há menos de 24 horas
+      const paidWebhooks = await this.webhookLogRepository
+        .createQueryBuilder('webhook')
+        .where('webhook.event = :event', { event: 'TRANSACTION_PAID' })
+        .andWhere('webhook.status = :status', { status: 'processed' })
+        .andWhere('webhook.created_at > :dateLimit', { dateLimit: twentyFourHoursAgo })
+        .orderBy('webhook.created_at', 'ASC')
+        .getMany();
 
       if (paidWebhooks.length === 0) {
-        this.logger.log('✅ Nenhum webhook TRANSACTION_PAID encontrado');
+        this.logger.log('✅ Nenhum webhook TRANSACTION_PAID encontrado (últimas 24h)');
         return;
       }
 
-      this.logger.log(`🔍 Encontrados ${paidWebhooks.length} webhooks TRANSACTION_PAID`);
+      this.logger.log(`🔍 Encontrados ${paidWebhooks.length} webhooks TRANSACTION_PAID (últimas 24h)`);
+      this.logger.log(`📅 Data limite: ${twentyFourHoursAgo.toISOString()}`);
 
       for (const webhook of paidWebhooks) {
         try {
