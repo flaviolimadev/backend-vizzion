@@ -77,6 +77,16 @@ export class BonusService {
         return;
       }
 
+      // Verificar se o pagamento já foi bonificado
+      const currentPayment = await this.pagamentoRepository.findOne({
+        where: { id: payment.id, bonus_processed: false }
+      });
+
+      if (!currentPayment) {
+        this.logger.log(`⚠️ Pagamento ${payment.id} já foi bonificado, pulando...`);
+        return;
+      }
+
       const user = payment.user;
       const valorEmReais = payment.value / 100; // Converter de centavos para reais
 
