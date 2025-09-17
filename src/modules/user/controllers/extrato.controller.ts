@@ -15,6 +15,12 @@ export class ExtratoController {
   @ApiResponse({ status: 200, description: 'Lista de extratos retornada com sucesso' })
   @ApiResponse({ status: 401, description: 'Não autorizado' })
   async getExtratos(@Req() req: any) {
+    console.log('🔍 ExtratoController: Request completo:', {
+      user: req.user,
+      userId: req.user?.id,
+      headers: req.headers
+    });
+    
     const userId = req.user.id;
     console.log('🔍 ExtratoController: Buscando extratos para usuário:', userId);
     const extratos = await this.extratoService.getExtratosByUser(userId);

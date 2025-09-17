@@ -14,11 +14,18 @@ export class ExtratoService {
   ) {}
 
   async getExtratosByUser(userId: string): Promise<Extrato[]> {
-    return this.extratoRepository.find({
+    console.log('🔍 ExtratoService: Buscando extratos para userId:', userId);
+    
+    const extratos = await this.extratoRepository.find({
       where: { user_id: userId },
       order: { created_at: 'DESC' },
       relations: ['user']
     });
+    
+    console.log('🔍 ExtratoService: Extratos encontrados:', extratos.length);
+    console.log('🔍 ExtratoService: User IDs dos extratos:', extratos.map(e => e.user_id));
+    
+    return extratos;
   }
 
   async createExtrato(
