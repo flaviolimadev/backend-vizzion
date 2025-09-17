@@ -32,6 +32,9 @@ export class Pagamento {
   @Column({ nullable: true })
   txid: string; // Transaction ID da API externa
 
+  @Column({ nullable: true })
+  client_identifier: string; // Identificador do cliente para a API
+
   @Column({
     type: 'int',
     default: PaymentStatus.PENDING

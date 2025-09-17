@@ -33,8 +33,7 @@ export class PaymentController {
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   async createPayment(@Body() createPaymentDto: CreatePaymentDto) {
-    console.log('🚀 Criando pagamento com PaymentService');
-    console.log('📊 Dados recebidos:', JSON.stringify(createPaymentDto, null, 2));
+    console.log(`🚀 Criando pagamento - R$ ${(createPaymentDto.amount / 100).toFixed(2)} | ${createPaymentDto.method}`);
     
     // Validar se userId foi fornecido
     if (!createPaymentDto.userId) {

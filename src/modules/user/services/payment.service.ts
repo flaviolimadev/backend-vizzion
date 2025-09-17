@@ -36,34 +36,28 @@ export class PaymentService {
     this.apiKey = this.configService.get<string>('PAYMENT_API_KEY') || '';
     this.apiSecret = this.configService.get<string>('PAYMENT_API_SECRET') || '';
     this.baseUrl = this.configService.get<string>('PAYMENT_API_URL') || 'https://app.vizzionpay.com/api/v1';
-    console.log("PaymentService initialized:");
-    console.log("PAYMENT_API_KEY:", this.apiKey ? 'Configurada' : 'Não configurada');
-    console.log("PAYMENT_API_SECRET:", this.apiSecret ? 'Configurada' : 'Não configurada');
-    console.log("PAYMENT_API_URL:", this.baseUrl);
+    console.log("💳 PaymentService initialized");
   }
 
   async createPayment(userId: string, createPaymentDto: ControllerCreatePaymentDto): Promise<any> {
     try {
-      console.log("🔍 Buscando usuário no banco:", userId);
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user) {
         console.error("❌ Usuário não encontrado:", userId);
         throw new HttpException("Usuário não encontrado", HttpStatus.NOT_FOUND);
       }
-      console.log("✅ Usuário encontrado:", { id: user.id, nome: user.nome, email: user.email });
 
       const useRealAPI = this.configService.get<string>('USE_REAL_API') === 'true';
-      console.log('🔍 DEBUG: useRealAPI =', useRealAPI, 'type:', typeof useRealAPI);
 
       if (useRealAPI) {
-        console.log('🚀 Usando API real da VizzionPay');
         const paymentResponse = await this.callVizzionPayAPI(createPaymentDto, user);
 
         // Determinar a descrição correta baseada no contexto
         let dbDescription = 'deposit'; // Padrão para depósitos
         if (createPaymentDto.description?.toLowerCase().includes('licença') || 
             createPaymentDto.description?.toLowerCase().includes('upgrade') ||
-            createPaymentDto.description?.toLowerCase().includes('license')) {
+            createPaymentDto.description?.toLowerCase().includes('license') ||
+            createPaymentDto.description?.toLowerCase().includes('licenca')) {
           dbDescription = 'licenca';
         }
 
@@ -71,6 +65,7 @@ export class PaymentService {
           user_id: user.id,
           method: createPaymentDto.method,
           txid: paymentResponse.data?.transactionId,
+          client_identifier: paymentResponse.data?.clientIdentifier || `probet_${user.id}_${Date.now()}`,
           status: PaymentStatus.PENDING,
           value: createPaymentDto.amount,
           description: dbDescription,
@@ -98,15 +93,13 @@ export class PaymentService {
           },
         };
       } else {
-        console.log('🔍 Usando dados simulados para pagamento (USE_REAL_API=false)');
         const mockPayment = this.generateMockPayment(userId, createPaymentDto);
-        console.log('🔍 DEBUG: mockPayment result:', JSON.stringify(mockPayment, null, 2));        return mockPayment;
+        return mockPayment;
       }
     } catch (error: any) {
-      console.error('❌ Erro no PaymentService:', error);
+      console.error('❌ Erro no PaymentService:', error.message);
       // Fallback to mock data if real API fails
       if (error.message.includes("Unexpected token '<'") || error.message.includes("API Error")) {
-        console.warn('⚠️ Erro na API real, retornando dados simulados como fallback.');
         const mockPayment = this.generateMockPayment(userId, createPaymentDto);
         return mockPayment;
       }
@@ -118,7 +111,7 @@ export class PaymentService {
   }
 
   private async callVizzionPayAPI(paymentData: ControllerCreatePaymentDto, user: User): Promise<any> {
-    console.log('📤 Chamando API da VizzionPay...');
+    console.log('📤 Criando pagamento PIX...');
     try {
       const identifier = `probet_${user.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const amountInReais = paymentData.amount / 100;
@@ -150,7 +143,8 @@ export class PaymentService {
         }
       };
 
-      console.log('📊 Dados enviados para VizzionPay:', JSON.stringify(body, null, 2));
+      // Log simplificado dos dados enviados
+      console.log(`💰 Valor: R$ ${amountInReais} | Cliente: ${user.nome} | Email: ${user.email}`);
 
       const response = await fetch(`${this.baseUrl}/gateway/pix/receive`, {
         method: 'POST',
@@ -169,7 +163,7 @@ export class PaymentService {
       }
 
       const data = await response.json();
-      console.log('✅ Resposta da VizzionPay recebida:', JSON.stringify(data, null, 2));
+      console.log(`✅ PIX criado - ID: ${data.transactionId} | Status: ${data.status}`);
 
       const pixCode = data.pix?.code || '';
       const qrCodeUrl = pixCode ? `https://quickchart.io/qr?text=${encodeURIComponent(pixCode)}&size=300` : '';

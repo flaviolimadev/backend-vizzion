@@ -2,6 +2,7 @@ import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import appConfig from './config/app.config';
 import dbConfig from './config/database.config';
 import { envValidationSchema } from './config/validation.schema';
@@ -17,6 +18,7 @@ import { HealthModule } from './modules/health/health.module';
       load: [appConfig, dbConfig],
       // validationSchema: envValidationSchema,
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
