@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { Pagamento, PaymentStatus } from '../entities/pagamento.entity';
 import { User } from '../entities/user.entity';
 import { ExtratoService } from './extrato.service';
-import { ExtratoType } from '../entities/extrato.entity';
+import { Extrato, ExtratoType } from '../entities/extrato.entity';
 
 @Injectable()
 export class PaymentCheckerService {
@@ -20,6 +20,8 @@ export class PaymentCheckerService {
     private pagamentoRepository: Repository<Pagamento>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Extrato)
+    private extratoRepository: Repository<Extrato>,
     private configService: ConfigService,
     private extratoService: ExtratoService,
   ) {
@@ -254,6 +256,24 @@ export class PaymentCheckerService {
 
       for (const payment of approvedPayments) {
         try {
+          // Verificar se já existe extrato para este pagamento (evita duplicação)
+          const existingExtrato = await this.extratoRepository.findOne({
+            where: {
+              reference_id: payment.id,
+              type: payment.description === 'deposit' ? ExtratoType.DEPOSIT : ExtratoType.INVESTMENT
+            }
+          });
+
+          if (existingExtrato) {
+            this.logger.log(`⚠️ Pagamento ${payment.id} já foi processado (extrato encontrado), pulando...`);
+            // Atualizar status para CONFIRMED mesmo assim
+            await this.pagamentoRepository.update(payment.id, {
+              status: PaymentStatus.CONFIRMED,
+              updated_at: new Date()
+            });
+            continue;
+          }
+
           // Usar uma transação atômica para evitar processamento duplicado
           await this.pagamentoRepository.manager.transaction(async (transactionalEntityManager) => {
             // Verificar e atualizar o status em uma única operação atômica
