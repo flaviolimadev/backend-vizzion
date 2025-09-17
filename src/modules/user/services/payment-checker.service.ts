@@ -71,11 +71,14 @@ export class PaymentCheckerService {
       }
 
       this.logger.log(`🔍 Verificando status do pagamento ${payment.id} - TXID: ${payment.txid}`);
+      this.logger.log(`🔍 ClientIdentifier: ${payment.client_identifier}`);
 
       // Construir URL com parâmetros
       const url = new URL(`${this.baseUrl}/gateway/transactions`);
       url.searchParams.append('id', payment.txid);
       url.searchParams.append('clientIdentifier', payment.client_identifier || '');
+      
+      this.logger.log(`🔍 URL da verificação: ${url.toString()}`);
 
       const response = await fetch(url.toString(), {
         method: 'GET',

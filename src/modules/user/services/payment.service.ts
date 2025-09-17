@@ -164,6 +164,8 @@ export class PaymentService {
 
       const data = await response.json();
       console.log(`✅ PIX criado - ID: ${data.transactionId} | Status: ${data.status}`);
+      console.log(`🔍 TXID da API: ${data.transactionId}`);
+      console.log(`🔍 ClientIdentifier: ${identifier}`);
 
       const pixCode = data.pix?.code || '';
       const qrCodeUrl = pixCode ? `https://quickchart.io/qr?text=${encodeURIComponent(pixCode)}&size=300` : '';
@@ -172,6 +174,7 @@ export class PaymentService {
         status: true,
         data: {
           transactionId: data.transactionId,
+          clientIdentifier: identifier,
           status: this.mapVizzionPayStatus(data.status),
           amount: paymentData.amount,
           method: paymentData.method,
