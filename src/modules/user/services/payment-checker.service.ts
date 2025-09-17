@@ -253,26 +253,38 @@ export class PaymentCheckerService {
       this.logger.log(`🎁 Encontrados ${approvedPayments.length} pagamentos aprovados para processar`);
 
       for (const payment of approvedPayments) {
-        // Verificar se o pagamento ainda está com status APPROVED (evitar processamento duplicado)
-        const currentPayment = await this.pagamentoRepository.findOne({
-          where: { id: payment.id, status: PaymentStatus.APPROVED }
-        });
+        try {
+          // Usar uma transação atômica para evitar processamento duplicado
+          await this.pagamentoRepository.manager.transaction(async (transactionalEntityManager) => {
+            // Verificar e atualizar o status em uma única operação atômica
+            const updateResult = await transactionalEntityManager.update(
+              Pagamento,
+              { 
+                id: payment.id, 
+                status: PaymentStatus.APPROVED 
+              },
+              { 
+                status: PaymentStatus.CONFIRMED,
+                updated_at: new Date()
+              }
+            );
 
-        if (!currentPayment) {
-          this.logger.log(`⚠️ Pagamento ${payment.id} já foi processado por outro processo, pulando...`);
-          continue;
+            // Se nenhuma linha foi afetada, significa que outro processo já processou
+            if (updateResult.affected === 0) {
+              this.logger.log(`⚠️ Pagamento ${payment.id} já foi processado por outro processo, pulando...`);
+              return;
+            }
+
+            this.logger.log(`🔄 Processando pagamento ${payment.id}...`);
+            
+            // Processar o pagamento
+            await this.processCompletedPayment(payment);
+            
+            this.logger.log(`✅ Pagamento ${payment.id} processado e confirmado`);
+          });
+        } catch (error) {
+          this.logger.error(`❌ Erro ao processar pagamento ${payment.id}:`, error);
         }
-
-        // Atualizar status para CONFIRMED (2) ANTES de processar para evitar duplicação
-        await this.pagamentoRepository.update(payment.id, {
-          status: PaymentStatus.CONFIRMED,
-          updated_at: new Date()
-        });
-
-        // Processar o pagamento
-        await this.processCompletedPayment(payment);
-        
-        this.logger.log(`✅ Pagamento ${payment.id} processado e confirmado`);
       }
 
     } catch (error) {
