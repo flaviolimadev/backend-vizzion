@@ -149,7 +149,8 @@ export class BonusService {
   private async giveBonus(referrer: User, amount: number, payment: Pagamento, level: number) {
     try {
       // Atualizar saldo do usuário
-      const newBalance = (referrer.balance_invest || 0) + amount;
+      const currentBalance = parseFloat((referrer.balance_invest || 0).toString());
+      const newBalance = currentBalance + amount;
       
       await this.userRepository.update(referrer.id, {
         balance_invest: newBalance
@@ -169,7 +170,7 @@ export class BonusService {
         reference_id: payment.id,
         reference_type: 'payment_bonus',
         status: 1, // COMPLETED
-        balance_before: referrer.balance_invest || 0,
+        balance_before: currentBalance,
         balance_after: newBalance
       });
 
