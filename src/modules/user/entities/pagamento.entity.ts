@@ -71,6 +71,9 @@ export class Pagamento {
   @UpdateDateColumn()
   updated_at: Date;
 
+  @Column({ type: 'boolean', default: false })
+  bonus_processed: boolean;
+
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'user_id' })
   user?: User;

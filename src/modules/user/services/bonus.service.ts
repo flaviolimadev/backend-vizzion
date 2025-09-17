@@ -43,27 +43,30 @@ export class BonusService {
 
   async processApprovedPayments() {
     try {
-      this.logger.log('🎁 Processando pagamentos aprovados para bonificação...');
+      this.logger.log('🎁 Processando pagamentos confirmados para bonificação...');
       
-      // Buscar pagamentos com status APPROVED (1)
-      const approvedPayments = await this.pagamentoRepository.find({
-        where: { status: PaymentStatus.APPROVED },
+      // Buscar pagamentos com status CONFIRMED (2) que ainda não foram bonificados
+      const confirmedPayments = await this.pagamentoRepository.find({
+        where: { 
+          status: PaymentStatus.CONFIRMED,
+          bonus_processed: false
+        },
         relations: ['user']
       });
 
-      if (approvedPayments.length === 0) {
-        this.logger.log('✅ Nenhum pagamento aprovado encontrado');
+      if (confirmedPayments.length === 0) {
+        this.logger.log('✅ Nenhum pagamento confirmado encontrado');
         return;
       }
 
-      this.logger.log(`🎁 Encontrados ${approvedPayments.length} pagamentos aprovados`);
+      this.logger.log(`🎁 Encontrados ${confirmedPayments.length} pagamentos confirmados`);
 
-      for (const payment of approvedPayments) {
+      for (const payment of confirmedPayments) {
         await this.processPaymentBonus(payment);
       }
 
     } catch (error) {
-      this.logger.error('❌ Erro ao processar pagamentos aprovados:', error);
+      this.logger.error('❌ Erro ao processar pagamentos confirmados:', error);
     }
   }
 
@@ -188,14 +191,14 @@ export class BonusService {
   private async markPaymentAsProcessed(payment: Pagamento) {
     try {
       await this.pagamentoRepository.update(payment.id, {
-        status: PaymentStatus.CONFIRMED, // Status 2
+        bonus_processed: true,
         updated_at: new Date()
       });
 
-      this.logger.log(`✅ Pagamento ${payment.id} marcado como processado (status 2)`);
+      this.logger.log(`✅ Pagamento ${payment.id} marcado como bonificado`);
 
     } catch (error) {
-      this.logger.error(`❌ Erro ao marcar pagamento ${payment.id} como processado:`, error);
+      this.logger.error(`❌ Erro ao marcar pagamento ${payment.id} como bonificado:`, error);
     }
   }
 }
