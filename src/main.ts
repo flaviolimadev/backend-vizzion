@@ -10,8 +10,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // app.use(helmet());
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Permite qualquer origem (necessário para apps móveis / WebView variado)
+      callback(null, true);
+    },
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+    exposedHeaders: 'Authorization, Content-Length'
   });
   // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
