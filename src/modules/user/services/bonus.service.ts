@@ -151,13 +151,13 @@ export class BonusService {
   private async giveBonus(referrer: User, amount: number, payment: Pagamento, level: number) {
     try {
       // Atualizar saldo do usuário
-      const currentBalance = parseFloat((referrer.balance_invest || 0).toString());
+      const currentBalance = parseFloat((referrer.balance || 0).toString());
       const newBalance = currentBalance + amount;
       
       this.logger.log(`💰 ${referrer.nome}: Saldo atual R$ ${currentBalance.toFixed(2)} + Bonificação R$ ${amount.toFixed(2)} = Novo saldo R$ ${newBalance.toFixed(2)}`);
       
       await this.userRepository.update(referrer.id, {
-        balance_invest: newBalance
+        balance: newBalance
       });
 
       // Criar extrato da bonificação
