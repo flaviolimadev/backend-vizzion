@@ -121,7 +121,7 @@ export class PaymentService {
       const body = {
         identifier: identifier,
         clientIdentifier: identifier,
-        callbackUrl: "https://backend.iprobet.click/api",
+        callbackUrl: "https://backend.vizzionbot.pro/payments/webhook",
         amount: amountInReais,
         discountFeeOfReceiver: false,
         client: {

@@ -1,7 +1,8 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, Req, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, Req, Param, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PaymentService } from '../services/payment.service';
+import { WebhookService } from '../services/webhook.service';
 import { ConfigService } from '@nestjs/config';
 import { PaymentMethod } from '../entities/pagamento.entity';
 
@@ -24,6 +25,7 @@ export interface CreatePaymentDto {
 export class PaymentController {
   constructor(
     private readonly paymentService: PaymentService,
+    private readonly webhookService: WebhookService,
     private readonly configService: ConfigService
   ) {}
 
@@ -87,5 +89,43 @@ export class PaymentController {
 
     // Para IDs reais, retornar 404 até haver método específico no service
     throw new HttpException('Pagamento não encontrado', HttpStatus.NOT_FOUND);
+  }
+
+  @Post('webhook')
+  @ApiOperation({ summary: 'Webhook da VizzionPay' })
+  @ApiResponse({ status: 200, description: 'Webhook processado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async handleWebhook(@Body() webhookData: any) {
+    console.log('📞 Webhook recebido da VizzionPay:', {
+      event: webhookData.event,
+      transactionId: webhookData.transaction?.id,
+      status: webhookData.transaction?.status
+    });
+
+    try {
+      const result = await this.webhookService.processWebhook(webhookData);
+      return result;
+    } catch (error: any) {
+      console.error('❌ Erro ao processar webhook:', error);
+      throw new HttpException(
+        error.message || 'Erro ao processar webhook',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Get('webhook-logs')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Listar logs de webhooks' })
+  @ApiResponse({ status: 200, description: 'Logs retornados com sucesso' })
+  async getWebhookLogs(
+    @Query('limit') limit: string = '50',
+    @Query('offset') offset: string = '0'
+  ) {
+    const limitNum = parseInt(limit, 10) || 50;
+    const offsetNum = parseInt(offset, 10) || 0;
+    
+    return this.webhookService.getWebhookLogs(limitNum, offsetNum);
   }
 }

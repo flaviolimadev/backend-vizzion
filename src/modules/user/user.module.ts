@@ -6,6 +6,7 @@ import { Plano } from './entities/plano.entity';
 import { YieldSchedule } from './entities/yield-schedule.entity';
 import { Pagamento } from './entities/pagamento.entity';
 import { Extrato } from './entities/extrato.entity';
+import { WebhookLog } from './entities/webhook-log.entity';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { PlanoController } from './controllers/plano.controller';
@@ -20,6 +21,7 @@ import { WalletService } from './services/wallet.service';
 import { PaymentController } from './controllers/payment.controller';
 import { PaymentService } from './services/payment.service';
 import { PaymentCheckerService } from './services/payment-checker.service';
+import { WebhookService } from './services/webhook.service';
 import { ExtratoController } from './controllers/extrato.controller';
 import { ExtratoService } from './services/extrato.service';
 import { BonusService } from './services/bonus.service';
@@ -29,7 +31,7 @@ import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento, Extrato]), 
+    TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento, Extrato, WebhookLog]), 
     ConfigModule, 
     MailModule,
     MulterModule.register({
@@ -40,7 +42,7 @@ import { MailModule } from '../mail/mail.module';
     }),
   ],
   controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController],
-  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, ExtratoService, BonusService, BonusCheckerService],
+  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, ExtratoService, BonusService, BonusCheckerService],
   exports: [TypeOrmModule],
 })
 export class UserModule {}
