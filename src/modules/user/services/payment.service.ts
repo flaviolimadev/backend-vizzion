@@ -47,7 +47,7 @@ export class PaymentService {
         throw new HttpException("Usuário não encontrado", HttpStatus.NOT_FOUND);
       }
 
-      const useRealAPI = this.configService.get<string>('USE_REAL_API') === 'true';
+      const useRealAPI = (this.configService.get<string>('USE_REAL_API') === 'true') || (process.env.NODE_ENV === 'production');
       console.log('🔍 USE_REAL_API:', useRealAPI);
 
       if (useRealAPI) {
@@ -96,15 +96,21 @@ export class PaymentService {
           },
         };
       } else {
+        // Em produção, nunca retornar mock
+        if (process.env.NODE_ENV === 'production') {
+          throw new HttpException('API de pagamento desabilitada', HttpStatus.SERVICE_UNAVAILABLE);
+        }
         const mockPayment = this.generateMockPayment(userId, createPaymentDto);
         return mockPayment;
       }
     } catch (error: any) {
       console.error('❌ Erro no PaymentService:', error.message);
-      // Fallback to mock data if real API fails
-      if (error.message.includes("Unexpected token '<'") || error.message.includes("API Error")) {
-        const mockPayment = this.generateMockPayment(userId, createPaymentDto);
-        return mockPayment;
+      // Em produção, não usar mock em hipótese alguma
+      if (process.env.NODE_ENV !== 'production') {
+        if (error.message.includes("Unexpected token '<'") || error.message.includes("API Error")) {
+          const mockPayment = this.generateMockPayment(userId, createPaymentDto);
+          return mockPayment;
+        }
       }
       throw new HttpException(
         error.message || 'Erro interno do servidor',
