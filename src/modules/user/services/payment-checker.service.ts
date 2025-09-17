@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Pagamento, PaymentStatus } from '../entities/pagamento.entity';
 import { User } from '../entities/user.entity';
+import { ExtratoService } from './extrato.service';
+import { ExtratoType } from '../entities/extrato.entity';
 
 @Injectable()
 export class PaymentCheckerService {
@@ -19,6 +21,7 @@ export class PaymentCheckerService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private configService: ConfigService,
+    private extratoService: ExtratoService,
   ) {
     this.apiKey = this.configService.get<string>('PAYMENT_API_KEY') || '';
     this.apiSecret = this.configService.get<string>('PAYMENT_API_SECRET') || '';
@@ -38,25 +41,27 @@ export class PaymentCheckerService {
 
       if (pendingPayments.length === 0) {
         this.logger.log('✅ Nenhum pagamento pendente encontrado');
-        return;
-      }
+      } else {
+        this.logger.log(`🔍 Encontrados ${pendingPayments.length} pagamentos pendentes`);
 
-      this.logger.log(`🔍 Encontrados ${pendingPayments.length} pagamentos pendentes`);
+        for (const payment of pendingPayments) {
+          // Verificar se o pagamento tem mais de 24 horas
+          const now = new Date();
+          const paymentTime = new Date(payment.created_at);
+          const diffInHours = (now.getTime() - paymentTime.getTime()) / (1000 * 60 * 60);
 
-      for (const payment of pendingPayments) {
-        // Verificar se o pagamento tem mais de 24 horas
-        const now = new Date();
-        const paymentTime = new Date(payment.created_at);
-        const diffInHours = (now.getTime() - paymentTime.getTime()) / (1000 * 60 * 60);
-
-        if (diffInHours > 24) {
-          // Cancelar pagamento antigo
-          await this.cancelOldPayment(payment);
-        } else {
-          // Verificar status normal do pagamento
-          await this.checkPaymentStatus(payment);
+          if (diffInHours > 24) {
+            // Cancelar pagamento antigo
+            await this.cancelOldPayment(payment);
+          } else {
+            // Verificar status normal do pagamento
+            await this.checkPaymentStatus(payment);
+          }
         }
       }
+
+      // Processar pagamentos aprovados que ainda não foram processados
+      await this.processApprovedPayments();
 
     } catch (error) {
       this.logger.error('❌ Erro ao verificar pagamentos pendentes:', error);
@@ -151,11 +156,22 @@ export class PaymentCheckerService {
 
       if (payment.description === 'deposit') {
         // Processar depósito - adicionar ao balance_invest
-        const novoBalanceInvest = (user.balance_invest || 0) + valorEmReais;
+        const balanceAntes = user.balance_invest || 0;
+        const novoBalanceInvest = balanceAntes + valorEmReais;
         
         await this.userRepository.update(user.id, {
           balance_invest: novoBalanceInvest
         });
+
+        // Criar extrato do depósito
+        await this.extratoService.createExtrato(
+          user.id,
+          ExtratoType.DEPOSIT,
+          valorEmReais,
+          `Depósito via ${payment.method || 'PIX'} - TXID: ${payment.txid}`,
+          payment.id,
+          'payment'
+        );
 
         this.logger.log(`💰 Depósito processado: +R$ ${valorEmReais.toFixed(2)} | Novo saldo: R$ ${novoBalanceInvest.toFixed(2)} | Usuário: ${user.nome}`);
 
@@ -178,12 +194,16 @@ export class PaymentCheckerService {
     try {
       // Mapear valor da licença para ID do plano
       const planMapping = {
-        20: 1,    // Plano Básico
-        50: 2,    // Plano Intermediário  
-        100: 3,   // Plano Avançado
-        200: 4,   // Plano Premium
-        500: 5,   // Plano Elite
-        1000: 6   // Plano VIP
+        4: 1,     // Plano Iniciante (R$ 4,00)
+        20: 2,    // Plano Iniciante (R$ 20,00)
+        100: 3,   // Plano Intermediário (R$ 100,00)
+        500: 4,   // Plano Avançado (R$ 500,00)
+        1000: 5,  // Plano Profissional (R$ 1.000,00)
+        2000: 6,  // Plano Expert (R$ 2.000,00)
+        5000: 7,  // Plano Master (R$ 5.000,00)
+        10000: 8, // Plano Elite (R$ 10.000,00)
+        15000: 9, // Plano Premium (R$ 15.000,00)
+        20000: 10 // Plano VIP (R$ 20.000,00)
       };
 
       const planoId = planMapping[valorEmReais];
@@ -198,10 +218,54 @@ export class PaymentCheckerService {
         plano: planoId
       });
 
+      // Criar extrato da compra de licença
+      await this.extratoService.createExtrato(
+        user.id,
+        ExtratoType.INVESTMENT,
+        valorEmReais,
+        `Compra de licença - Plano ${planoId} (R$ ${valorEmReais.toFixed(2)}) - TXID: ${payment.txid}`,
+        payment.id,
+        'payment'
+      );
+
       this.logger.log(`🔑 Licença ativada: Plano ${planoId} (R$ ${valorEmReais.toFixed(2)}) | Usuário: ${user.nome}`);
 
     } catch (error) {
       this.logger.error(`❌ Erro ao ativar licença para usuário ${user.nome}:`, error);
+    }
+  }
+
+  private async processApprovedPayments() {
+    try {
+      this.logger.log('🔄 Processando pagamentos aprovados...');
+      
+      // Buscar pagamentos com status APPROVED (1) que ainda não foram processados
+      const approvedPayments = await this.pagamentoRepository.find({
+        where: { status: PaymentStatus.APPROVED },
+        relations: ['user']
+      });
+
+      if (approvedPayments.length === 0) {
+        this.logger.log('✅ Nenhum pagamento aprovado encontrado');
+        return;
+      }
+
+      this.logger.log(`🎁 Encontrados ${approvedPayments.length} pagamentos aprovados para processar`);
+
+      for (const payment of approvedPayments) {
+        await this.processCompletedPayment(payment);
+        
+        // Atualizar status para CONFIRMED (2) após processar
+        await this.pagamentoRepository.update(payment.id, {
+          status: PaymentStatus.CONFIRMED,
+          updated_at: new Date()
+        });
+        
+        this.logger.log(`✅ Pagamento ${payment.id} processado e confirmado`);
+      }
+
+    } catch (error) {
+      this.logger.error('❌ Erro ao processar pagamentos aprovados:', error);
     }
   }
 
