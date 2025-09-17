@@ -44,12 +44,12 @@ export class PaymentCheckerService {
       this.logger.log(`🔍 Encontrados ${pendingPayments.length} pagamentos pendentes`);
 
       for (const payment of pendingPayments) {
-        // Verificar se o pagamento tem mais de 15 minutos
+        // Verificar se o pagamento tem mais de 24 horas
         const now = new Date();
         const paymentTime = new Date(payment.created_at);
-        const diffInMinutes = (now.getTime() - paymentTime.getTime()) / (1000 * 60);
+        const diffInHours = (now.getTime() - paymentTime.getTime()) / (1000 * 60 * 60);
 
-        if (diffInMinutes > 15) {
+        if (diffInHours > 24) {
           // Cancelar pagamento antigo
           await this.cancelOldPayment(payment);
         } else {
@@ -79,6 +79,8 @@ export class PaymentCheckerService {
       url.searchParams.append('clientIdentifier', payment.client_identifier || '');
       
       this.logger.log(`🔍 URL da verificação: ${url.toString()}`);
+      this.logger.log(`🔍 API Key: ${this.apiKey ? '***' + this.apiKey.slice(-4) : 'NÃO DEFINIDA'}`);
+      this.logger.log(`🔍 Base URL: ${this.baseUrl}`);
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -90,7 +92,9 @@ export class PaymentCheckerService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
         this.logger.error(`❌ Erro na API VizzionPay para pagamento ${payment.id}: ${response.status} ${response.statusText}`);
+        this.logger.error(`❌ Resposta da API: ${errorText}`);
         return;
       }
 
