@@ -48,9 +48,12 @@ export class PaymentService {
       }
 
       const useRealAPI = this.configService.get<string>('USE_REAL_API') === 'true';
+      console.log('🔍 USE_REAL_API:', useRealAPI);
 
       if (useRealAPI) {
+        console.log('🔍 Chamando API VizzionPay...');
         const paymentResponse = await this.callVizzionPayAPI(createPaymentDto, user);
+        console.log('✅ Resposta da API:', paymentResponse);
 
         // Determinar a descrição correta baseada no contexto
         let dbDescription = 'deposit'; // Padrão para depósitos
@@ -112,6 +115,9 @@ export class PaymentService {
 
   private async callVizzionPayAPI(paymentData: ControllerCreatePaymentDto, user: User): Promise<any> {
     console.log('📤 Criando pagamento PIX...');
+    console.log('🔍 API Key:', this.apiKey ? '***' + this.apiKey.slice(-4) : 'NÃO DEFINIDA');
+    console.log('🔍 API Secret:', this.apiSecret ? '***' + this.apiSecret.slice(-4) : 'NÃO DEFINIDA');
+    console.log('🔍 Base URL:', this.baseUrl);
     try {
       const identifier = `probet_${user.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const amountInReais = paymentData.amount / 100;

@@ -9,7 +9,8 @@ export enum ExtratoType {
   REFERRAL = 'referral',
   BONUS = 'bonus',
   FEE = 'fee',
-  REFUND = 'refund'
+  REFUND = 'refund',
+  YIELD = 'yield'
 }
 
 export enum ExtratoStatus {
