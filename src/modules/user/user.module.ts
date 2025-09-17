@@ -22,6 +22,7 @@ import { PaymentController } from './controllers/payment.controller';
 import { PaymentService } from './services/payment.service';
 import { PaymentCheckerService } from './services/payment-checker.service';
 import { WebhookService } from './services/webhook.service';
+import { WebhookPaymentProcessorService } from './services/webhook-payment-processor.service';
 import { ExtratoController } from './controllers/extrato.controller';
 import { ExtratoService } from './services/extrato.service';
 import { BonusService } from './services/bonus.service';
@@ -42,7 +43,7 @@ import { MailModule } from '../mail/mail.module';
     }),
   ],
   controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController],
-  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, ExtratoService, BonusService, BonusCheckerService],
+  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, WebhookPaymentProcessorService, ExtratoService, BonusService, BonusCheckerService],
   exports: [TypeOrmModule],
 })
 export class UserModule {}

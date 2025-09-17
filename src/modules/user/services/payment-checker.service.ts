@@ -30,7 +30,7 @@ export class PaymentCheckerService {
     this.baseUrl = this.configService.get<string>('PAYMENT_API_URL') || 'https://app.vizzionpay.com/api/v1';
   }
 
-  @Cron('*/2 * * * *') // A cada 2 minutos
+  // @Cron('*/2 * * * *') // A cada 2 minutos - DESABILITADO: Agora usa webhooks
   async checkPendingPayments() {
     try {
       this.logger.log('🔄 Verificando pagamentos pendentes...');
