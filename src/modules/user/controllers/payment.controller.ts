@@ -85,15 +85,7 @@ export class PaymentController {
       return { status: 'pending' };
     }
 
-    // Caso contrário, delegar para o service se existir suporte futuro
-    try {
-      const result = await this.paymentService.getPaymentStatusByPublicId?.(id);
-      if (!result) {
-        throw new HttpException('Pagamento não encontrado', HttpStatus.NOT_FOUND);
-      }
-      return result;
-    } catch (e) {
-      throw new HttpException('Pagamento não encontrado', HttpStatus.NOT_FOUND);
-    }
+    // Para IDs reais, retornar 404 até haver método específico no service
+    throw new HttpException('Pagamento não encontrado', HttpStatus.NOT_FOUND);
   }
 }
