@@ -47,13 +47,9 @@ export class PaymentService {
         throw new HttpException("Usuário não encontrado", HttpStatus.NOT_FOUND);
       }
 
-      const useRealAPI = (this.configService.get<string>('USE_REAL_API') === 'true') || (process.env.NODE_ENV === 'production');
-      console.log('🔍 USE_REAL_API:', useRealAPI);
-
-      if (useRealAPI) {
-        console.log('🔍 Chamando API VizzionPay...');
-        const paymentResponse = await this.callVizzionPayAPI(createPaymentDto, user);
-        console.log('✅ Resposta da API:', paymentResponse);
+      console.log('🔍 Chamando API VizzionPay...');
+      const paymentResponse = await this.callVizzionPayAPI(createPaymentDto, user);
+      console.log('✅ Resposta da API:', paymentResponse);
 
         // Determinar a descrição correta baseada no contexto
         let dbDescription = 'deposit'; // Padrão para depósitos
@@ -78,40 +74,25 @@ export class PaymentService {
         });
         const savedPagamento = await this.pagamentoRepository.save(pagamento);
 
-        return {
-          status: true,
-          data: {
-            id: savedPagamento.id,
-            status: paymentResponse.data?.status,
-            amount: savedPagamento.value,
-            method: savedPagamento.method,
-            pix: {
-              qrcode: savedPagamento.pix_qrcode_url,
-              qrcodeUrl: savedPagamento.pix_qrcode_url,
-              copyPaste: savedPagamento.pix_code,
-              expirationDate: savedPagamento.pix_expiration,
-            },
-            txid: savedPagamento.txid,
-            createdAt: savedPagamento.created_at,
+      return {
+        status: true,
+        data: {
+          id: savedPagamento.id,
+          status: paymentResponse.data?.status,
+          amount: savedPagamento.value,
+          method: savedPagamento.method,
+          pix: {
+            qrcode: savedPagamento.pix_qrcode_url,
+            qrcodeUrl: savedPagamento.pix_qrcode_url,
+            copyPaste: savedPagamento.pix_code,
+            expirationDate: savedPagamento.pix_expiration,
           },
-        };
-      } else {
-        // Em produção, nunca retornar mock
-        if (process.env.NODE_ENV === 'production') {
-          throw new HttpException('API de pagamento desabilitada', HttpStatus.SERVICE_UNAVAILABLE);
-        }
-        const mockPayment = this.generateMockPayment(userId, createPaymentDto);
-        return mockPayment;
-      }
+          txid: savedPagamento.txid,
+          createdAt: savedPagamento.created_at,
+        },
+      };
     } catch (error: any) {
       console.error('❌ Erro no PaymentService:', error.message);
-      // Em produção, não usar mock em hipótese alguma
-      if (process.env.NODE_ENV !== 'production') {
-        if (error.message.includes("Unexpected token '<'") || error.message.includes("API Error")) {
-          const mockPayment = this.generateMockPayment(userId, createPaymentDto);
-          return mockPayment;
-        }
-      }
       throw new HttpException(
         error.message || 'Erro interno do servidor',
         error.status || HttpStatus.INTERNAL_SERVER_ERROR
