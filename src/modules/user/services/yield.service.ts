@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { YieldSchedule } from '../entities/yield-schedule.entity';
 import { User } from '../entities/user.entity';
 import { Extrato } from '../entities/extrato.entity';
@@ -88,6 +88,24 @@ export class YieldService {
       const schedule = await this.yieldScheduleRepository.findOne({ where: { id: scheduleId } });
       if (!schedule) {
         return { success: false, message: 'Horário de rendimento não encontrado' };
+      }
+
+      // Verificar se já foi coletado hoje
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      
+      const existingExtrato = await this.extratoRepository
+        .createQueryBuilder('extrato')
+        .where('extrato.user_id = :userId', { userId })
+        .andWhere('extrato.type = :type', { type: ExtratoType.YIELD })
+        .andWhere('extrato.description = :description', { description: `Rendimento ${schedule.start_time}-${schedule.end_time}` })
+        .andWhere('extrato.created_at >= :startOfDay', { startOfDay })
+        .andWhere('extrato.created_at < :endOfDay', { endOfDay })
+        .getOne();
+
+      if (existingExtrato) {
+        return { success: false, message: 'Rendimento já foi coletado hoje neste horário' };
       }
 
       // Calcular valor do rendimento

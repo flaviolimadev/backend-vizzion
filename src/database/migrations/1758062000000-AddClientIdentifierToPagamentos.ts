@@ -11,3 +11,4 @@ export class AddClientIdentifierToPagamentos1758062000000 implements MigrationIn
         await queryRunner.query(`ALTER TABLE "pagamentos" DROP COLUMN "client_identifier"`);
     }
 }
+

@@ -33,11 +33,25 @@ export class YieldController {
   @ApiResponse({ status: 200, description: 'Rendimento recebido com sucesso' })
   @ApiResponse({ status: 400, description: 'Erro na solicitação' })
   async claimYield(@Req() req: any, @Body() body: { scheduleId: number }) {
-    const userId = req.user.id;
-    const { scheduleId } = body;
-    
-    console.log(`🎁 Usuário ${userId} solicitando rendimento para schedule ${scheduleId}`);
-    
-    return this.yieldService.claimYield(userId, scheduleId);
+    try {
+      const userId = req.user.id;
+      const { scheduleId } = body;
+      
+      console.log(`🎁 Usuário ${userId} solicitando rendimento para schedule ${scheduleId}`);
+      console.log(`🔍 Request body:`, body);
+      console.log(`🔍 User from JWT:`, req.user);
+      
+      const result = await this.yieldService.claimYield(userId, scheduleId);
+      console.log(`✅ Resultado do claimYield:`, result);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Erro no controller claimYield:', error);
+      return {
+        success: false,
+        message: 'Erro interno do servidor',
+        error: error.message
+      };
+    }
   }
 } 
