@@ -156,7 +156,7 @@ export class PaymentCheckerService {
 
       if (payment.description === 'deposit') {
         // Processar depósito - adicionar ao balance_invest
-        const balanceAntes = user.balance_invest || 0;
+        const balanceAntes = parseFloat((user.balance_invest || 0).toString());
         const novoBalanceInvest = balanceAntes + valorEmReais;
         
         await this.userRepository.update(user.id, {
@@ -253,13 +253,24 @@ export class PaymentCheckerService {
       this.logger.log(`🎁 Encontrados ${approvedPayments.length} pagamentos aprovados para processar`);
 
       for (const payment of approvedPayments) {
-        await this.processCompletedPayment(payment);
-        
-        // Atualizar status para CONFIRMED (2) após processar
+        // Verificar se o pagamento ainda está com status APPROVED (evitar processamento duplicado)
+        const currentPayment = await this.pagamentoRepository.findOne({
+          where: { id: payment.id, status: PaymentStatus.APPROVED }
+        });
+
+        if (!currentPayment) {
+          this.logger.log(`⚠️ Pagamento ${payment.id} já foi processado por outro processo, pulando...`);
+          continue;
+        }
+
+        // Atualizar status para CONFIRMED (2) ANTES de processar para evitar duplicação
         await this.pagamentoRepository.update(payment.id, {
           status: PaymentStatus.CONFIRMED,
           updated_at: new Date()
         });
+
+        // Processar o pagamento
+        await this.processCompletedPayment(payment);
         
         this.logger.log(`✅ Pagamento ${payment.id} processado e confirmado`);
       }
