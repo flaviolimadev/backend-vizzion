@@ -128,6 +128,15 @@ export class PaymentService {
       const identifier = `probet_${user.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const amountInReais = paymentData.amount / 100;
 
+      const formatCpf = (value?: string): string => {
+        if (!value) return '000.000.000-00';
+        const digits = value.replace(/\D/g, '');
+        if (digits.length !== 11) return '000.000.000-00';
+        return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
+      };
+
+      const customerDocument = formatCpf(paymentData.customer?.document);
+
       const body = {
         identifier: identifier,
         clientIdentifier: identifier,
@@ -139,7 +148,7 @@ export class PaymentService {
           email: user.email || paymentData.customer?.email || "cliente@email.com",
           phone: user.contato || paymentData.customer?.phone || "11999999999",
           documentType: "CPF",
-          document: paymentData.customer?.document || "000.000.000-00"
+          document: customerDocument
         },
         pix: {
           type: "email",
@@ -150,7 +159,7 @@ export class PaymentService {
           name: `${user.nome} ${user.sobrenome}`,
           document: {
             type: "cpf",
-            number: paymentData.customer?.document || "000.000.000-00"
+            number: customerDocument
           }
         }
       };
