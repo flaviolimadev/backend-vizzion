@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, Req, Param } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PaymentService } from '../services/payment.service';
@@ -73,5 +73,27 @@ export class PaymentController {
       message: 'Endpoint de teste funcionando',
       timestamp: new Date().toISOString()
     };
+  }
+
+  @Get('status/:id')
+  @ApiOperation({ summary: 'Consultar status do pagamento por ID público' })
+  @ApiResponse({ status: 200, description: 'Status retornado com sucesso' })
+  @ApiResponse({ status: 404, description: 'Pagamento não encontrado' })
+  async getPaymentStatus(@Param('id') id: string) {
+    // IDs mock_ são usados quando a API real não está ativa; retornar pendente para permitir polling do front
+    if (id && id.startsWith('mock_')) {
+      return { status: 'pending' };
+    }
+
+    // Caso contrário, delegar para o service se existir suporte futuro
+    try {
+      const result = await this.paymentService.getPaymentStatusByPublicId?.(id);
+      if (!result) {
+        throw new HttpException('Pagamento não encontrado', HttpStatus.NOT_FOUND);
+      }
+      return result;
+    } catch (e) {
+      throw new HttpException('Pagamento não encontrado', HttpStatus.NOT_FOUND);
+    }
   }
 }
