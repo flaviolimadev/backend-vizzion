@@ -163,15 +163,22 @@ export class BonusService {
 
   private async giveBonus(referrer: User, amount: number, payment: Pagamento, level: number) {
     try {
-      // Atualizar saldo do usuário
-      const currentBalance = parseFloat((referrer.balance || 0).toString());
-      const newBalance = currentBalance + amount;
-      
-      this.logger.log(`💰 ${referrer.nome}: Saldo atual R$ ${currentBalance.toFixed(2)} + Bonificação R$ ${amount.toFixed(2)} = Novo saldo R$ ${newBalance.toFixed(2)}`);
-      
-      await this.userRepository.update(referrer.id, {
-        balance: newBalance
+      // Não atualiza user.balance diretamente. O saldo passa a ser calculado via extratos (yield + referral).
+      const bonusToApply = Number(parseFloat(amount as any as string).toFixed(2));
+
+      // Idempotência: um extrato por pagamento+nivel
+      const uniqueRefId = `bonus:${payment.id}:${level}`;
+      const existing = await this.extratoRepository.findOne({
+        where: { user_id: referrer.id, reference_type: 'payment_bonus', reference_id: uniqueRefId }
       });
+      if (existing) {
+        this.logger.warn(`⚠️ Extrato de bônus já existe para ${referrer.id} refId=${uniqueRefId}, pulando.`);
+        return;
+      }
+
+      // Calcular balance_before e after com base nos extratos (yield + referral)
+      const currentBalance = await this.computeComputedBalance(referrer.id);
+      const newBalance = Number((currentBalance + bonusToApply).toFixed(2));
 
       // Criar extrato da bonificação
       const bonusType = payment.description === 'licenca' ? ExtratoType.REFERRAL : ExtratoType.BONUS;
@@ -182,10 +189,10 @@ export class BonusService {
       await this.extratoRepository.save({
         user_id: referrer.id,
         type: bonusType,
-        amount: amount,
+        amount: bonusToApply,
         description: description,
-        reference_id: payment.user_id, // ID do usuário que gerou a bonificação
-        reference_type: 'payment_bonus',
+        reference_id: uniqueRefId,
+        reference_type: 'payment_bonus', // único por pagamento+nivel
         status: 1, // COMPLETED
         balance_before: currentBalance,
         balance_after: newBalance
@@ -196,6 +203,41 @@ export class BonusService {
     } catch (error) {
       this.logger.error(`❌ Erro ao dar bonificação para ${referrer.nome}:`, error);
     }
+  }
+
+  // Calcula saldo a partir dos extratos de rendimento e indicações (direta/indireta)
+  private async computeComputedBalance(userId: string): Promise<number> {
+    const yieldSumRaw = await this.extratoRepository
+      .createQueryBuilder('e')
+      .select('COALESCE(SUM(e.amount),0)', 'total')
+      .where('e.user_id = :userId', { userId })
+      .andWhere('e.status = :status', { status: 1 })
+      .andWhere('e.type = :type', { type: ExtratoType.YIELD })
+      .getRawOne();
+    const yieldSum = parseFloat(yieldSumRaw?.total || '0');
+
+    const directSumRaw = await this.extratoRepository
+      .createQueryBuilder('e')
+      .select('COALESCE(SUM(e.amount),0)', 'total')
+      .where('e.user_id = :userId', { userId })
+      .andWhere('e.status = :status', { status: 1 })
+      .andWhere('e.type = :type', { type: ExtratoType.REFERRAL })
+      .andWhere('e.description LIKE :pattern', { pattern: '%Nível 1%' })
+      .getRawOne();
+    const directSum = parseFloat(directSumRaw?.total || '0');
+
+    const indirectSumRaw = await this.extratoRepository
+      .createQueryBuilder('e')
+      .select('COALESCE(SUM(e.amount),0)', 'total')
+      .where('e.user_id = :userId', { userId })
+      .andWhere('e.status = :status', { status: 1 })
+      .andWhere('e.type = :type', { type: ExtratoType.REFERRAL })
+      .andWhere('e.description LIKE :levelPattern', { levelPattern: '%Nível%' })
+      .andWhere('e.description NOT LIKE :notPattern', { notPattern: '%Nível 1%' })
+      .getRawOne();
+    const indirectSum = parseFloat(indirectSumRaw?.total || '0');
+
+    return Number((yieldSum + directSum + indirectSum).toFixed(2));
   }
 
   private async markPaymentAsProcessed(payment: Pagamento) {

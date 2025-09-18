@@ -58,18 +58,28 @@ export class WalletService {
   async getUserBalances(userId: string) {
     const user = await this.userRepository.findOne({ 
       where: { id: userId },
-      select: ['balance', 'balance_invest', 'balance_block']
+      select: ['balance_invest', 'balance_block']
     });
     
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
 
+    // Balance calculado por extratos (yield + referral + bonus - withdrawals)
+    const computedBalance = await this.userRepository.manager.getRepository('extratos' as any)
+      .createQueryBuilder('e')
+      .select('COALESCE(SUM(e.amount),0)', 'total')
+      .where('e.user_id = :userId', { userId })
+      .andWhere('e.status = :status', { status: 1 })
+      .andWhere('e.type IN (:...types)', { types: ['yield', 'referral', 'bonus', 'withdrawal'] })
+      .getRawOne()
+      .then((r: any) => Number(parseFloat(r?.total || '0').toFixed(2)));
+
     return {
-      balance: Number(user.balance),
+      balance: computedBalance,
       balance_invest: Number(user.balance_invest),
       balance_block: Number(user.balance_block),
-      total: Number(user.balance) + Number(user.balance_invest) + Number(user.balance_block)
+      total: computedBalance + Number(user.balance_invest) + Number(user.balance_block)
     };
   }
 } 

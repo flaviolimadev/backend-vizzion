@@ -89,3 +89,4 @@ export class CreateWebhookLogsTable1758119000000 implements MigrationInterface {
     await queryRunner.dropTable('webhook_logs');
   }
 }
+

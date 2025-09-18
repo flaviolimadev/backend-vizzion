@@ -90,18 +90,23 @@ export class YieldService {
         return { success: false, message: 'Horário de rendimento não encontrado' };
       }
 
-      // Verificar se já foi coletado hoje
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-      
+      // Verificar se estamos dentro da janela do horário (server time)
+      const now = new Date();
+      const [sh, sm] = schedule.start_time.split(':').map((v) => parseInt(v, 10));
+      const [eh, em] = schedule.end_time.split(':').map((v) => parseInt(v, 10));
+      const windowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sh, sm, 0);
+      const windowEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eh, em, 0);
+      if (now < windowStart || now > windowEnd) {
+        return { success: false, message: `Fora da janela de coleta. Disponível entre ${schedule.start_time}-${schedule.end_time}.` };
+      }
+
+      // Verificar se já foi coletado hoje (evitar problemas de timezone usando cast para date)
       const existingExtrato = await this.extratoRepository
         .createQueryBuilder('extrato')
         .where('extrato.user_id = :userId', { userId })
         .andWhere('extrato.type = :type', { type: ExtratoType.YIELD })
         .andWhere('extrato.description = :description', { description: `Rendimento ${schedule.start_time}-${schedule.end_time}` })
-        .andWhere('extrato.created_at >= :startOfDay', { startOfDay })
-        .andWhere('extrato.created_at < :endOfDay', { endOfDay })
+        .andWhere("extrato.created_at::date = CURRENT_DATE")
         .getOne();
 
       if (existingExtrato) {
@@ -115,13 +120,16 @@ export class YieldService {
         return { success: false, message: 'Valor do rendimento inválido' };
       }
 
-      // Atualizar balance do usuário (não balance_invest)
-      const currentBalance = parseFloat((user.balance || 0).toString());
-      const newBalance = currentBalance + yieldAmount;
-      
-      await this.userRepository.update(userId, {
-        balance: newBalance
-      });
+      // Não atualiza balance diretamente; cálculo do saldo passa a considerar extratos
+      const currentBalance = await this.extratoRepository
+        .createQueryBuilder('e')
+        .select('COALESCE(SUM(e.amount),0)', 'total')
+        .where('e.user_id = :userId', { userId })
+        .andWhere('e.status = :status', { status: 1 })
+        .andWhere('e.type IN (:...types)', { types: [ExtratoType.YIELD, ExtratoType.REFERRAL, ExtratoType.BONUS, ExtratoType.WITHDRAWAL] })
+        .getRawOne()
+        .then(r => Number(parseFloat(r?.total || '0').toFixed(2)));
+      const newBalance = Number((currentBalance + yieldAmount).toFixed(2));
 
       // Criar extrato de rendimento
       const extrato = this.extratoRepository.create({

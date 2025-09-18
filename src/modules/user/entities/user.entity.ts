@@ -73,6 +73,9 @@ import {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   balance_block: number;
 
+  @Column({ type: 'varchar', length: 20, default: 'user' })
+  role: 'user' | 'admin';
+
   @CreateDateColumn()
   created_at: Date;
   

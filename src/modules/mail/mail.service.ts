@@ -13,7 +13,8 @@ type TemplateName =
   | 'password-reset'
   | 'password-changed'
   | 'password-set'
-  | 'referral-notification';
+  | 'referral-notification'
+  | 'withdrawal-request';
 
 @Injectable()
 export class MailService {

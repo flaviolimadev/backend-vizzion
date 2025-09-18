@@ -44,3 +44,4 @@ export class WebhookLog {
   @UpdateDateColumn()
   updated_at: Date;
 }
+

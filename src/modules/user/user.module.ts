@@ -7,6 +7,7 @@ import { YieldSchedule } from './entities/yield-schedule.entity';
 import { Pagamento } from './entities/pagamento.entity';
 import { Extrato } from './entities/extrato.entity';
 import { WebhookLog } from './entities/webhook-log.entity';
+import { Saque } from './entities/saque.entity';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { PlanoController } from './controllers/plano.controller';
@@ -27,12 +28,16 @@ import { ExtratoController } from './controllers/extrato.controller';
 import { ExtratoService } from './services/extrato.service';
 import { BonusService } from './services/bonus.service';
 import { BonusCheckerService } from './services/bonus-checker.service';
+import { SaqueController } from './controllers/saque.controller';
+import { SaqueService } from './services/saque.service';
 import { ConfigModule } from '@nestjs/config';
 import { MailModule } from '../mail/mail.module';
+import { AdminUserController } from './controllers/admin.user.controller';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento, Extrato, WebhookLog]), 
+    TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento, Extrato, WebhookLog, Saque]), 
     ConfigModule, 
     MailModule,
     MulterModule.register({
@@ -42,8 +47,8 @@ import { MailModule } from '../mail/mail.module';
       },
     }),
   ],
-  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController],
-  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, WebhookPaymentProcessorService, ExtratoService, BonusService, BonusCheckerService],
+  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController, SaqueController, AdminUserController],
+  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, WebhookPaymentProcessorService, ExtratoService, BonusService, BonusCheckerService, SaqueService, RolesGuard],
   exports: [TypeOrmModule],
 })
 export class UserModule {}
