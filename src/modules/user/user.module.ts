@@ -29,6 +29,7 @@ import { ExtratoService } from './services/extrato.service';
 import { BonusService } from './services/bonus.service';
 import { BonusCheckerService } from './services/bonus-checker.service';
 import { SaqueController } from './controllers/saque.controller';
+import { AdminSaqueController } from './controllers/admin.saque.controller';
 import { SaqueService } from './services/saque.service';
 import { ConfigModule } from '@nestjs/config';
 import { MailModule } from '../mail/mail.module';
@@ -47,7 +48,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
       },
     }),
   ],
-  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController, SaqueController, AdminUserController],
+  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController, SaqueController, AdminUserController, AdminSaqueController],
   providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, WebhookPaymentProcessorService, ExtratoService, BonusService, BonusCheckerService, SaqueService, RolesGuard],
   exports: [TypeOrmModule],
 })

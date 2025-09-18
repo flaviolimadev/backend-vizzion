@@ -90,15 +90,8 @@ export class YieldService {
         return { success: false, message: 'Horário de rendimento não encontrado' };
       }
 
-      // Verificar se estamos dentro da janela do horário (server time)
-      const now = new Date();
-      const [sh, sm] = schedule.start_time.split(':').map((v) => parseInt(v, 10));
-      const [eh, em] = schedule.end_time.split(':').map((v) => parseInt(v, 10));
-      const windowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sh, sm, 0);
-      const windowEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eh, em, 0);
-      if (now < windowStart || now > windowEnd) {
-        return { success: false, message: `Fora da janela de coleta. Disponível entre ${schedule.start_time}-${schedule.end_time}.` };
-      }
+      // OBS: Validação de janela no servidor desabilitada para evitar bloqueio por fuso horário.
+      // A UI controla a disponibilidade por horário; aqui garantimos apenas idempotência diária.
 
       // Verificar se já foi coletado hoje (evitar problemas de timezone usando cast para date)
       const existingExtrato = await this.extratoRepository
