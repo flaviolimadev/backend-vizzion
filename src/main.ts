@@ -9,6 +9,15 @@ import { DataSource } from 'typeorm';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // app.use(helmet());
+  
+  // Middleware para adicionar headers no-cache
+  app.use((req: any, res: any, next: any) => {
+    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+    next();
+  });
+  
   app.enableCors({
     origin: (origin, callback) => {
       // Permite qualquer origem (necessário para apps móveis / WebView variado)

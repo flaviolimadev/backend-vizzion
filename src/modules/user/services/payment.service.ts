@@ -127,7 +127,7 @@ export class PaymentService {
         client: {
           name: user.nome || paymentData.customer?.name || "Cliente",
           email: user.email || paymentData.customer?.email || "cliente@email.com",
-          phone: user.contato || paymentData.customer?.phone || "11999999999",
+          phone: "41997208398",
           documentType: "CPF",
           document: customerDocument
         },
