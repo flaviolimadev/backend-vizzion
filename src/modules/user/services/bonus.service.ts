@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { Pagamento, PaymentStatus } from '../entities/pagamento.entity';
 import { Extrato, ExtratoType } from '../entities/extrato.entity';
+import { MailService } from '../../mail/mail.service';
 
 @Injectable()
 export class BonusService {
@@ -39,6 +40,7 @@ export class BonusService {
     private pagamentoRepository: Repository<Pagamento>,
     @InjectRepository(Extrato)
     private extratoRepository: Repository<Extrato>,
+    private readonly mailService: MailService,
   ) {}
 
   async processApprovedPayments() {
@@ -199,6 +201,23 @@ export class BonusService {
       });
 
       this.logger.log(`💰 Bonificação de R$ ${amount.toFixed(2)} para ${referrer.nome} (Nível ${level})`);
+
+      // Enviar e-mail de notificação de bonificação ao usuário
+      try {
+        await this.mailService.sendTemplate({
+          to: referrer.email,
+          subject: 'Você recebeu uma bonificação! 🎁',
+          template: 'notice',
+          variables: {
+            app_name: 'VisionBot',
+            year: new Date().getFullYear(),
+            title: 'Parabéns! Você recebeu uma bonificação',
+            message: `Você recebeu R$ ${bonusToApply.toFixed(2)} de bonificação ${payment.description === 'licenca' ? 'por licença' : 'por depósito'} (Nível ${level}).`,
+          },
+        });
+      } catch (mailErr) {
+        this.logger.warn('Falha ao enviar e-mail de bonificação:', mailErr?.message || mailErr);
+      }
 
     } catch (error) {
       this.logger.error(`❌ Erro ao dar bonificação para ${referrer.nome}:`, error);

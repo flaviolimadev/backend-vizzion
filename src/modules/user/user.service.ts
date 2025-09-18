@@ -66,18 +66,19 @@ export class UserService {
         });
       }
 
-      // Se o usuário foi indicado, enviar email de notificação para quem indicou
+      // Se o usuário foi indicado, enviar email de notificação em cadeia (até o 20º nível)
       if (saved.referred_at) {
         try {
-          const referrer = await this.repo.findOne({
-            where: { id: saved.referred_at },
-            select: ['id', 'nome', 'sobrenome', 'email']
-          });
+          const appUrl = this.config.get<string>('APP_PUBLIC_URL');
+          let currentReferrerId: string | null | undefined = saved.referred_at;
+          for (let level = 1; level <= 20 && currentReferrerId; level++) {
+            const referrer = await this.repo.findOne({
+              where: { id: currentReferrerId },
+              select: ['id', 'nome', 'sobrenome', 'email', 'referred_at']
+            });
+            if (!referrer) break;
 
-          if (referrer) {
-            console.log('📧 Enviando email de notificação de indicação para:', referrer.email);
-            
-            const appUrl = this.config.get<string>('APP_PUBLIC_URL');
+            console.log(`📧 Enviando email de notificação de indicação (nível ${level}) para:`, referrer.email);
             await this.mail.sendTemplate({
               to: referrer.email,
               subject: 'Nova indicação registrada!',
@@ -91,14 +92,16 @@ export class UserService {
                 new_user_contact: saved.contato,
                 dashboard_url: `${appUrl}/settings`,
                 cta_label: 'Ver indicações',
+                level,
               },
             });
-            
-            console.log('✅ Email de notificação de indicação enviado com sucesso');
+            console.log(`✅ Email de notificação de indicação (nível ${level}) enviado`);
+
+            currentReferrerId = referrer.referred_at;
           }
         } catch (emailError) {
-          console.error('❌ Erro ao enviar email de notificação de indicação:', emailError);
-          // Não falha o cadastro se o email de notificação falhar
+          console.error('❌ Erro ao enviar emails de notificação de indicação em cadeia:', emailError);
+          // Não falha o cadastro se emails falharem
         }
       }
 
