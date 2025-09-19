@@ -485,12 +485,28 @@ export class UserService {
       levelStats: []
     };
 
-    for (let level = 1; level <= 6; level++) {
+    for (let level = 1; level <= 10; level++) {
       const count = await this.getReferralsByLevel(userId, level);
+      
+      // Percentuais corretos para licenças (10 níveis)
+      let percentage = 0;
+      switch (level) {
+        case 1: percentage = 15; break;
+        case 2: percentage = 5; break;
+        case 3: percentage = 3; break;
+        case 4: percentage = 2; break;
+        case 5: percentage = 1; break;
+        case 6: percentage = 1; break;
+        case 7: percentage = 1; break;
+        case 8: percentage = 1; break;
+        case 9: percentage = 0.5; break;
+        case 10: percentage = 0.5; break;
+      }
+      
       stats.levelStats.push({
         level,
         count,
-        percentage: level === 1 ? 15 : level === 2 ? 2 : level === 3 ? 1 : level === 4 ? 1 : level === 5 ? 0.5 : 0.5
+        percentage
       });
       stats.totalReferrals += count;
     }
