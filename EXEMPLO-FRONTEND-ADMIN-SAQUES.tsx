@@ -350,3 +350,4 @@ export default function AdminSaquesPage() {
 
 // 6. Ver detalhes de um saque específico
 // const saque = await api<Saque>(`/admin/saques/${saqueId}`);
+

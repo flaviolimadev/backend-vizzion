@@ -274,3 +274,4 @@ Todos os endpoints requerem:
    PATCH /admin/saques/{id}/status
    { "status": 3, "notes": "Cancelado por solicitação do usuário" }
    ```
+
