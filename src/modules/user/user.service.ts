@@ -438,6 +438,63 @@ export class UserService {
     };
   }
 
+  async getLicenseSales(userId: string) {
+    // Buscar todos os usuários que este usuário indicou e que têm plano diferente de 0
+    const referredUsers = await this.repo.find({
+      where: { referred_at: userId },
+      select: ['id', 'nome', 'sobrenome', 'email', 'plano', 'created_at'],
+      relations: ['planoObj']
+    });
+
+    // Mapear valores dos planos (baseado no webhook-payment-processor.service.ts)
+    const planValues = {
+      1: 4,     // Plano Iniciante (R$ 4,00)
+      2: 20,    // Plano Iniciante (R$ 20,00)
+      3: 100,   // Plano Intermediário (R$ 100,00)
+      4: 500,   // Plano Avançado (R$ 500,00)
+      5: 1000,  // Plano Profissional (R$ 1.000,00)
+      6: 2000,  // Plano Expert (R$ 2.000,00)
+      7: 5000,  // Plano Master (R$ 5.000,00)
+      8: 10000, // Plano Elite (R$ 10.000,00)
+      9: 15000, // Plano Premium (R$ 15.000,00)
+      10: 20000 // Plano VIP (R$ 20.000,00)
+    };
+
+    // Calcular vendas totais
+    let totalSales = 0;
+    const salesDetails = [];
+
+    for (const user of referredUsers) {
+      if (user.plano && user.plano > 0) {
+        const planValue = planValues[user.plano] || 0;
+        totalSales += planValue;
+        
+        salesDetails.push({
+          userId: user.id,
+          nome: user.nome,
+          sobrenome: user.sobrenome,
+          email: user.email,
+          plano: user.plano,
+          valor: planValue,
+          created_at: user.created_at
+        });
+      }
+    }
+
+    // Meta da promoção: R$ 30.000
+    const targetAmount = 30000;
+    const progressPercentage = Math.min((totalSales / targetAmount) * 100, 100);
+
+    return {
+      totalSales,
+      targetAmount,
+      progressPercentage: Math.round(progressPercentage * 100) / 100,
+      salesCount: salesDetails.length,
+      salesDetails,
+      remainingAmount: Math.max(targetAmount - totalSales, 0)
+    };
+  }
+
   async getReferralTree(userId: string, maxLevel: number = 6): Promise<any> {
     const buildTree = async (parentId: string, currentLevel: number): Promise<any> => {
       if (currentLevel > maxLevel) return null;

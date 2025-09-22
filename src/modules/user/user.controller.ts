@@ -126,6 +126,12 @@ export class UserController {
     return this.service.getReferralStats(req.user.sub);
   }
 
+  @Get('me/license-sales')
+  @UseGuards(JwtAuthGuard)
+  async getLicenseSales(@Req() req: any) {
+    return this.service.getLicenseSales(req.user.sub);
+  }
+
   @Get('me/referral-tree')
   @UseGuards(JwtAuthGuard)
   async getReferralTree(@Req() req: any) {
