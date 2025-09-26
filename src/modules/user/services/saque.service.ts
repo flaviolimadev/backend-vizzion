@@ -20,107 +20,58 @@ export class SaqueService {
   ) {}
 
   async createSaque(userId: string, createSaqueDto: CreateSaqueDto) {
-    console.log('🚀 createSaque - Iniciando:', {
-      userId,
-      createSaqueDto,
-      timestamp: new Date().toISOString()
-    });
-
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      console.log('❌ Usuário não encontrado:', userId);
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    console.log('👤 Usuário encontrado:', {
-      id: user.id,
-      balance: user.balance,
-      balance_invest: user.balance_invest,
-      balance_block: user.balance_block
-    });
-
     // Regra: só permite saque se houver valor investido
     if (Number(user.balance_invest) <= 0) {
-      console.log('❌ Erro: Usuário sem saldo investido:', user.balance_invest);
       throw new BadRequestException('Você precisa ter saldo investido para realizar saques.');
     }
 
-    console.log('✅ Usuário tem saldo investido:', user.balance_invest);
-
     // Verificar se o usuário tem saldo suficiente baseado no tipo de saque
     const { type, amount, cpf, key_type, key_value, notes } = createSaqueDto;
-    
-    console.log('🔍 Dados do saque:', {
-      type,
-      amount,
-      cpf,
-      key_type,
-      key_value,
-      notes
-    });
     
     const currentBalance = type === SaqueType.BALANCE ? 
       Number(user.balance) : 
       Number(user.balance_invest);
     
-    console.log('💰 Saldo atual:', {
-      type,
-      currentBalance,
-      userBalance: user.balance,
-      userBalanceInvest: user.balance_invest
-    });
-    
     if (currentBalance <= 0) {
       const balanceType = type === SaqueType.BALANCE ? 'saldo disponível' : 'saldo investido';
-      console.log('❌ Erro: Saldo insuficiente:', { balanceType, currentBalance });
       throw new BadRequestException(`Você precisa ter ${balanceType} para realizar saques.`);
     }
 
     if (amount < 10) {
-      console.log('❌ Erro: Valor mínimo não atingido:', amount);
       throw new BadRequestException('Saque mínimo é de R$ 10,00');
     }
 
-    console.log('✅ Valor mínimo OK:', amount);
-
     // Validar tipo de saque
     if (!Object.values(SaqueType).includes(type)) {
-      console.log('❌ Erro: Tipo de saque inválido:', type);
       throw new BadRequestException('Tipo de saque inválido');
     }
 
-    console.log('✅ Tipo de saque OK:', type);
-
     // Validar tipo de chave
     if (!Object.values(KeyType).includes(key_type)) {
-      console.log('❌ Erro: Tipo de chave inválido:', key_type);
       throw new BadRequestException('Tipo de chave inválido');
     }
-
-    console.log('✅ Tipo de chave OK:', key_type);
 
     // Validar formato da chave baseado no tipo
     if (key_type === KeyType.CPF) {
       const cleanCpf = key_value.replace(/\D/g, '');
       if (cleanCpf.length !== 11) {
-        console.log('❌ Erro: CPF inválido:', { key_value, cleanCpf, length: cleanCpf.length });
         throw new BadRequestException('CPF deve ter 11 dígitos');
       }
-      console.log('✅ CPF OK:', cleanCpf);
     } else if (key_type === KeyType.EMAIL) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(key_value)) {
-        console.log('❌ Erro: Email inválido:', key_value);
         throw new BadRequestException('Email inválido');
       }
-      console.log('✅ Email OK:', key_value);
     } else if (key_type === KeyType.CONTATO) {
       const cleanPhone = key_value.replace(/\D/g, '');
-      if (cleanPhone.length < 10 || cleanPhone.length > 11) {
-        console.log('❌ Erro: Telefone inválido:', { key_value, cleanPhone, length: cleanPhone.length });
-        throw new BadRequestException('Telefone deve ter 10 ou 11 dígitos');
+      if (cleanPhone.length < 10 || cleanPhone.length > 13) {
+        throw new BadRequestException('Telefone deve ter entre 10 e 13 dígitos');
       }
-      console.log('✅ Telefone OK:', cleanPhone);
     }
 
     // Calcular taxa baseada no tipo

@@ -18,20 +18,7 @@ export class SaqueController {
   @ApiResponse({ status: 400, description: 'Saldo insuficiente ou dados inválidos' })
   @ApiResponse({ status: 401, description: 'Não autorizado' })
   async createSaque(@Req() req: any, @Body() createSaqueDto: CreateSaqueDto) {
-    console.log('🚀 Controller createSaque - Dados recebidos:', {
-      userId: req.user.id,
-      createSaqueDto,
-      timestamp: new Date().toISOString()
-    });
-    
-    try {
-      const result = await this.saqueService.createSaque(req.user.id, createSaqueDto);
-      console.log('✅ Controller createSaque - Sucesso:', result);
-      return result;
-    } catch (error) {
-      console.log('❌ Controller createSaque - Erro:', error);
-      throw error;
-    }
+    return this.saqueService.createSaque(req.user.id, createSaqueDto);
   }
 
   @Get()
