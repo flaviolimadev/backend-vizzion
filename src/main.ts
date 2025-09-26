@@ -1,10 +1,11 @@
 // src/main.ts
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, HttpException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { DataSource } from 'typeorm';
+import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,16 +20,43 @@ async function bootstrap() {
   });
   
   app.enableCors({
-    origin: (origin, callback) => {
-      // Permite qualquer origem (necessário para apps móveis / WebView variado)
-      callback(null, true);
-    },
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://localhost:3000',
+      'https://localhost:5173',
+      // Adicione aqui os domínios de produção
+      process.env.FRONTEND_URL || 'http://localhost:5173'
+    ],
     credentials: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
-    exposedHeaders: 'Authorization, Content-Length'
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+    exposedHeaders: ['Authorization', 'Content-Length']
   });
-  // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  // Filtro global para garantir que sempre retornemos JSON
+  app.useGlobalFilters(new AllExceptionsFilter());
+  
+  // Validation pipe global com mensagens de erro consistentes
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    transform: true,
+    forbidNonWhitelisted: true,
+    exceptionFactory: (errors) => {
+      const formattedErrors = errors.map(error => ({
+        field: error.property,
+        messages: Object.values(error.constraints || {})
+      }));
+      
+      return new HttpException({
+        ok: false,
+        status: 400,
+        error: 'Validation failed',
+        message: 'Dados inválidos',
+        details: formattedErrors
+      }, 400);
+    }
+  }));
 
   const swagger = new DocumentBuilder().setTitle('Base Backend').setVersion('1.0.0').build();
   SwaggerModule.setup('/docs', app, SwaggerModule.createDocument(app, swagger));
