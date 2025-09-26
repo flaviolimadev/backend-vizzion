@@ -46,6 +46,16 @@ export class PaymentController {
     return this.paymentService.createPayment(createPaymentDto.userId, createPaymentDto);
   }
 
+  @Post('create-usdt')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Criar pagamento USDT TRC20' })
+  @ApiResponse({ status: 201, description: 'Pagamento USDT criado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  async createUsdtPayment(@Req() req: any, @Body() body: { amount: number; description?: string }) {
+    console.log(`🚀 createUsdtPayment controller: userId=${req.user.sub}, amount=${body.amount}, description=${body.description}`);
+    return this.paymentService.createUsdtPayment(req.user.sub, body.amount, body.description);
+  }
+
   @Get('pending')
   
   @ApiOperation({ summary: 'Buscar pagamentos pendentes do usuário' })

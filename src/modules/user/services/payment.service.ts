@@ -258,4 +258,109 @@ export class PaymentService {
   async updatePaymentStatus(id: string, status: PaymentStatus): Promise<void> {
     await this.pagamentoRepository.update(id, { status });
   }
+
+  async createUsdtPayment(userId: string, amount: number, description: string = 'licenca'): Promise<any> {
+    try {
+      console.log(`💰 createUsdtPayment: userId=${userId}, amount=${amount}, description=${description}`);
+      
+      // Testar conexão com o banco
+      try {
+        const testConnection = await this.pagamentoRepository.count();
+        console.log(`🔍 Teste de conexão com banco: ${testConnection} pagamentos existentes`);
+      } catch (connectionError) {
+        console.error('❌ Erro de conexão com banco:', connectionError);
+        throw new HttpException("Erro de conexão com banco de dados", HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+      
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new HttpException("Usuário não encontrado", HttpStatus.NOT_FOUND);
+      }
+
+      // Cotação fixa BRL para USD
+      const BRL_TO_USD_RATE = 5.5;
+      const brlAmount = amount / 100; // Converter centavos para reais
+      const usdAmount = Number((brlAmount / BRL_TO_USD_RATE).toFixed(2));
+      
+      console.log(`💰 Cálculo: ${amount} centavos = R$ ${brlAmount} = $${usdAmount} USD`);
+      
+      // Verificar se já existe um pagamento com o mesmo valor USD e status pendente
+      let finalUsdAmount = usdAmount;
+      let attempts = 0;
+      const maxAttempts = 100; // Evitar loop infinito
+      
+      while (attempts < maxAttempts) {
+        const existingPayment = await this.pagamentoRepository.findOne({
+          where: {
+            txid: finalUsdAmount.toString(),
+            status: PaymentStatus.PENDING
+          }
+        });
+        
+        if (!existingPayment) {
+          break; // Valor único encontrado
+        }
+        
+        // Ajustar centavos para tornar único
+        finalUsdAmount = Number((finalUsdAmount + 0.01).toFixed(2));
+        attempts++;
+      }
+      
+      if (attempts >= maxAttempts) {
+        throw new HttpException("Não foi possível gerar valor único para USDT", HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      // Criar pagamento USDT
+      const pagamento = this.pagamentoRepository.create({
+        user_id: userId,
+        value: amount, // Valor em reais (centavos)
+        method: PaymentMethod.CRYPTO,
+        description,
+        status: PaymentStatus.PENDING,
+        txid: finalUsdAmount.toString() // TXID será o valor em USD
+      });
+
+      console.log(`💰 Pagamento a ser criado:`, {
+        user_id: userId,
+        value: amount,
+        method: PaymentMethod.CRYPTO,
+        description,
+        status: PaymentStatus.PENDING,
+        txid: finalUsdAmount.toString()
+      });
+
+      try {
+        const savedPayment = await this.pagamentoRepository.save(pagamento);
+        console.log(`💰 Pagamento USDT criado: ID ${savedPayment.id} | R$ ${(amount / 100).toFixed(2)} | $${finalUsdAmount.toFixed(2)}`);
+        console.log(`💰 Pagamento salvo:`, savedPayment);
+
+        return {
+          id: savedPayment.id,
+          status: 'pending',
+          amount: amount,
+          method: 'CRYPTO',
+          crypto: {
+            type: 'USDT',
+            network: 'TRC20',
+            address: 'TSSTKSeTrqyrDuo59qMpLXaPZhB3Zq8825',
+            usdAmount: finalUsdAmount
+          },
+          createdAt: savedPayment.created_at.toISOString()
+        };
+      } catch (saveError) {
+        console.error('❌ Erro ao salvar pagamento no banco:', saveError);
+        throw new HttpException(
+          `Erro ao salvar pagamento: ${saveError.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro ao criar pagamento USDT:', error);
+      throw new HttpException(
+        error.message || 'Erro ao criar pagamento USDT',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
 }
