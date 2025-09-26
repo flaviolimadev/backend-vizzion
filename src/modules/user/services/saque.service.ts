@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Saque, SaqueType, SaqueStatus } from '../entities/saque.entity';
+import { Saque, SaqueType, SaqueStatus, KeyType } from '../entities/saque.entity';
 import { User } from '../entities/user.entity';
 import { Extrato, ExtratoType } from '../entities/extrato.entity';
 import { CreateSaqueDto } from '../dto/saque.dto';
@@ -30,10 +30,48 @@ export class SaqueService {
       throw new BadRequestException('Você precisa ter saldo investido para realizar saques.');
     }
 
+    // Verificar se o usuário tem saldo suficiente baseado no tipo de saque
     const { type, amount, cpf, key_type, key_value, notes } = createSaqueDto;
+    
+    const currentBalance = type === SaqueType.BALANCE ? 
+      Number(user.balance) : 
+      Number(user.balance_invest);
+    
+    if (currentBalance <= 0) {
+      const balanceType = type === SaqueType.BALANCE ? 'saldo disponível' : 'saldo investido';
+      throw new BadRequestException(`Você precisa ter ${balanceType} para realizar saques.`);
+    }
 
     if (amount < 10) {
       throw new BadRequestException('Saque mínimo é de R$ 10,00');
+    }
+
+    // Validar tipo de saque
+    if (!Object.values(SaqueType).includes(type)) {
+      throw new BadRequestException('Tipo de saque inválido');
+    }
+
+    // Validar tipo de chave
+    if (!Object.values(KeyType).includes(key_type)) {
+      throw new BadRequestException('Tipo de chave inválido');
+    }
+
+    // Validar formato da chave baseado no tipo
+    if (key_type === KeyType.CPF) {
+      const cleanCpf = key_value.replace(/\D/g, '');
+      if (cleanCpf.length !== 11) {
+        throw new BadRequestException('CPF deve ter 11 dígitos');
+      }
+    } else if (key_type === KeyType.EMAIL) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(key_value)) {
+        throw new BadRequestException('Email inválido');
+      }
+    } else if (key_type === KeyType.CONTATO) {
+      const cleanPhone = key_value.replace(/\D/g, '');
+      if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+        throw new BadRequestException('Telefone deve ter 10 ou 11 dígitos');
+      }
     }
 
     // Calcular taxa baseada no tipo
@@ -42,10 +80,6 @@ export class SaqueService {
     const finalAmount = Number((amount - tax).toFixed(2));
 
     // Verificar se o usuário tem saldo suficiente
-    const currentBalance = type === SaqueType.BALANCE ? 
-      Number(user.balance) : 
-      Number(user.balance_invest);
-
     if (currentBalance < amount) {
       throw new BadRequestException(`Saldo insuficiente. Disponível: R$ ${currentBalance.toFixed(2)}`);
     }
