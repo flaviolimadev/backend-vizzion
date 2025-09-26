@@ -18,14 +18,16 @@ export class SaqueController {
   @ApiResponse({ status: 400, description: 'Saldo insuficiente ou dados inválidos' })
   @ApiResponse({ status: 401, description: 'Não autorizado' })
   async createSaque(@Req() req: any, @Body() createSaqueDto: CreateSaqueDto) {
-    return this.saqueService.createSaque(req.user.id, createSaqueDto);
+    const userId = req.user?.id || req.user?.sub;
+    return this.saqueService.createSaque(userId, createSaqueDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Listar saques do usuário' })
   @ApiResponse({ status: 200, description: 'Lista de saques retornada com sucesso' })
   async getSaquesByUser(@Req() req: any) {
-    return this.saqueService.getSaquesByUser(req.user.id);
+    const userId = req.user?.id || req.user?.sub;
+    return this.saqueService.getSaquesByUser(userId);
   }
 
   @Get('all')

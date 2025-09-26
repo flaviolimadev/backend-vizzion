@@ -1,6 +1,6 @@
-import { IsEnum, IsNumber, IsString, IsNotEmpty, Min, MaxLength } from 'class-validator';
+import { IsEnum, IsNumber, IsString, IsNotEmpty, Min, MaxLength, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export enum SaqueType {
   BALANCE = 'balance',
@@ -20,10 +20,7 @@ export class CreateSaqueDto {
   type: SaqueType;
 
   @ApiProperty({ description: 'Valor do saque (mínimo R$ 10,00)', minimum: 10 })
-  @Transform(({ value }) => {
-    const num = Number(value);
-    return isNaN(num) ? value : num;
-  })
+  @Type(() => Number)
   @IsNumber({}, { message: 'Amount deve ser um número' })
   @Min(10, { message: 'Valor mínimo é R$ 10,00' })
   amount: number;
@@ -46,6 +43,7 @@ export class CreateSaqueDto {
   key_value: string;
 
   @ApiProperty({ description: 'Observações opcionais', required: false })
+  @IsOptional()
   @IsString()
   notes?: string;
 }
