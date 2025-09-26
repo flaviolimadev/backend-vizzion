@@ -1,5 +1,6 @@
 import { IsEnum, IsNumber, IsString, IsNotEmpty, Min, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export enum SaqueType {
   BALANCE = 'balance',
@@ -19,6 +20,7 @@ export class CreateSaqueDto {
   type: SaqueType;
 
   @ApiProperty({ description: 'Valor do saque (mínimo R$ 10,00)', minimum: 10 })
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @Min(10)
   amount: number;
