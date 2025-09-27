@@ -27,7 +27,11 @@ export class AuthService {
   ) {}
 
   private async validateUser(email: string, password: string): Promise<User> {
-    const user = await this.users.findOne({ where: { email }, select: ['id', 'email', 'password', 'email_verified'] });
+    // Buscar usuário com email case-insensitive
+    const user = await this.users.findOne({ 
+      where: { email: email.toLowerCase() }, 
+      select: ['id', 'email', 'password', 'email_verified'] 
+    });
     if (!user) throw new UnauthorizedException('Credenciais inválidas');
 
     const valid = await bcrypt.compare(password, user.password);
@@ -125,7 +129,7 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string) {
-    const user = await this.users.findOne({ where: { email } });
+    const user = await this.users.findOne({ where: { email: email.toLowerCase() } });
     if (!user) throw new NotFoundException('Email não encontrado'); // retorna erro para email inexistente
 
     const tokenPlain = randomUUID();
