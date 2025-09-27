@@ -29,9 +29,14 @@ export class UserService {
   async create(dto: CreateUserDto) {
     // aplica hash
     const hashed = await this.hashPassword(dto.password);
+    
+    // Limpar o número de telefone removendo caracteres especiais, mas mantendo o + inicial
+    const cleanPhone = dto.contato.replace(/[^\d+]/g, '');
+    
     const entity = this.repo.create({
       ...dto,
       email: dto.email.toLowerCase(), // Garantir que email seja minúsculo
+      contato: cleanPhone, // Usar número limpo
       password: hashed,
       status: 0,
       deleted: false,
