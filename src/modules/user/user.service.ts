@@ -31,6 +31,7 @@ export class UserService {
     const hashed = await this.hashPassword(dto.password);
     const entity = this.repo.create({
       ...dto,
+      email: dto.email.toLowerCase(), // Garantir que email seja minúsculo
       password: hashed,
       status: 0,
       deleted: false,

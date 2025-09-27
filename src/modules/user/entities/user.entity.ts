@@ -25,9 +25,9 @@ import {
     @Column()
     email: string;
   
-    @Index({ unique: true })
-    @Column()
-    contato: string;
+  @Index({ unique: true })
+  @Column({ length: 50 })
+  contato: string;
   
     // Senha será salva já criptografada pelo service
   @Column({ select: false })
