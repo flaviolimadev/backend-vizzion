@@ -13,3 +13,4 @@ export class SimpleIncreaseContatoLength1734700000001 implements MigrationInterf
         await queryRunner.query(`ALTER TABLE "users" ALTER COLUMN "contato" TYPE varchar(20)`);
     }
 }
+
