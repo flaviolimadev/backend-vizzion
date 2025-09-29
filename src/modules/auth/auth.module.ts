@@ -9,6 +9,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UserToken } from './entities/user-token.entity';
 import { PasswordReset } from './entities/password-reset.entity';
+import { AdminGuard } from './admin.guard';
 import { MailModule } from '../mail/mail.module';
 
 @Module({
@@ -26,8 +27,8 @@ import { MailModule } from '../mail/mail.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, AdminGuard],
+  exports: [AuthService, AdminGuard],
 })
 export class AuthModule {}
 
