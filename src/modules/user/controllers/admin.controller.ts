@@ -52,6 +52,8 @@ export class AdminController {
       // Preparar dados da transferência
       const callbackUrlEnv = process.env.PAYMENT_CALLBACK_URL;
       const payload = {
+        // VizzionPay espera 'identifier'; mantemos 'clientIdentifier' para rastreamento interno
+        identifier: transferData.clientIdentifier,
         clientIdentifier: transferData.clientIdentifier,
         callbackUrl: callbackUrlEnv && callbackUrlEnv.trim().length > 0 ? callbackUrlEnv : transferData.callbackUrl,
         amount: Number(transferData.amount), // Converter para number
@@ -70,89 +72,35 @@ export class AdminController {
         }
       };
 
-      // Múltiplas tentativas com diferentes URLs e autenticação
-      const urls = [
-        `${PAYMENT_API_URL}/gateway/transfers`,
-        `${PAYMENT_API_URL}/transfers`,
-        `${PAYMENT_API_URL.replace('/api/v1', '')}/api/gateway/transfers`,
-        `${PAYMENT_API_URL.replace('/api/v1', '')}/gateway/transfers`,
-        'https://api.vizzion.com.br/gateway/transfers',
-        'https://api.vizzion.com.br/v1/transfers'
-      ];
+      // Seguir exatamente o formato usado pelo backprobet (funcional):
+      // - URL fixa: PAYMENT_API_URL/gateway/transfers
+      // - Headers: x-public-key e x-secret-key
+      const url = `${PAYMENT_API_URL.replace(/\/$/, '')}/gateway/transfers`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'x-public-key': PAYMENT_API_KEY,
+        'x-secret-key': PAYMENT_API_SECRET,
+      };
 
-      const authMethods = [
-        // Método 1: Authorization Bearer + X-Api-Key/Secret
-        (apiKey: string, apiSecret: string) => ({
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'X-Api-Key': apiKey,
-          'X-Api-Secret': apiSecret,
-          'User-Agent': 'VizzionBot-Backend/1.0'
-        }),
-        // Método 2: Apenas X-Api-Key/Secret
-        (apiKey: string, apiSecret: string) => ({
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Api-Key': apiKey,
-          'X-Api-Secret': apiSecret,
-          'User-Agent': 'VizzionBot-Backend/1.0'
-        }),
-        // Método 3: Authorization Bearer apenas
-        (apiKey: string, apiSecret: string) => ({
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'User-Agent': 'VizzionBot-Backend/1.0'
-        }),
-        // Método 4: Basic Auth
-        (apiKey: string, apiSecret: string) => ({
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`,
-          'User-Agent': 'VizzionBot-Backend/1.0'
-        })
-      ];
+      console.log('📤 Enviando para VizzionPay (modelo backprobet):', url);
+      console.log('Payload:', JSON.stringify(payload));
 
       let response: Response | null = null;
       let lastError = '';
-
-      for (let urlIndex = 0; urlIndex < urls.length; urlIndex++) {
-        const url = urls[urlIndex];
-        
-        for (let authIndex = 0; authIndex < authMethods.length; authIndex++) {
-          const headers = authMethods[authIndex](PAYMENT_API_KEY, PAYMENT_API_SECRET);
-          
-          console.log(`🔄 Tentativa ${urlIndex + 1}.${authIndex + 1}: ${url}`);
-          console.log(`   Auth: ${headers['Authorization'] ? 'Bearer/Basic' : 'X-Api-Key'}`);
-          
-          try {
-            response = await fetch(url, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-              console.log('✅ SUCESSO! URL e autenticação funcionaram');
-              break;
-            } else {
-              const errorText = await response.text().catch(() => '');
-              console.log(`❌ ${response.status}: ${errorText.slice(0, 200)}`);
-              lastError = `${response.status}: ${errorText.slice(0, 200)}`;
-            }
-          } catch (error) {
-            console.log(`❌ Erro de rede: ${(error as Error).message}`);
-            lastError = (error as Error).message;
-          }
-        }
-
-        if (response?.ok) break;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        lastError = (err as Error).message;
       }
 
       if (!response || !response.ok) {
         console.log('🚨 TODAS AS TENTATIVAS FALHARAM');
-        console.log('Último erro:', lastError);
+        console.log('Último erro:', lastError || (response ? await response.text().catch(() => '') : 'sem resposta'));
         console.log('Payload enviado:', JSON.stringify(payload, null, 2));
         
         // MODO EMERGÊNCIA AUTOMÁTICO - PIX será processado manualmente
