@@ -37,23 +37,16 @@ export class YieldController {
     const hours = now.getHours();
     const minutes = now.getMinutes();
     
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // 0 = domingo, 6 = sábado
-    const isMondayMorning = dayOfWeek === 1 && hours === 0 && minutes <= 55;
-    
     return {
       currentTime: now.toISOString(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       dayOfWeek,
       hours,
       minutes,
-      isWeekend,
-      isMondayMorning,
-      tradingBlocked: isWeekend || isMondayMorning,
-      message: isWeekend 
-        ? 'Trading bloqueado: fim de semana' 
-        : isMondayMorning 
-          ? 'Trading bloqueado: segunda-feira de manhã (00:00-00:55)'
-          : 'Trading liberado'
+      isWeekend: false,
+      isMondayMorning: false,
+      tradingBlocked: false,
+      message: 'Trading liberado'
     };
   }
 
