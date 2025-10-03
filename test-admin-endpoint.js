@@ -32,7 +32,7 @@ async function testAdminEndpoint() {
       clientIdentifier: 'test-123',
       callbackUrl: 'https://example.com/callback',
       amount: 100,
-      discountFeeOfReceiver: true,
+      discountFeeOfReceiver: false, // Taxa já descontada no backend
       pix: {
         type: 'email',
         key: 'test@example.com'
