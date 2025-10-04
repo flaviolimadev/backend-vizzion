@@ -35,6 +35,17 @@ export class TradingController {
   @ApiOperation({ summary: 'Atualizar modo de trading do usuário' })
   @ApiResponse({ status: 200, description: 'Modo de trading atualizado' })
   async updateTradingMode(@Request() req, @Body() updateTradingModeDto: UpdateTradingModeDto) {
+    // Bloquear mudança de modo de trading até segunda-feira
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+    
+    if (dayOfWeek !== 1) { // Se não for segunda-feira
+      return {
+        success: false,
+        message: 'As operações voltam na segunda-feira'
+      };
+    }
+    
     return this.tradingService.updateTradingMode(req.user.sub, updateTradingModeDto.mode);
   }
 } 
