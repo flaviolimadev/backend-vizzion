@@ -37,9 +37,11 @@ export class YieldController {
     const hours = now.getHours();
     const minutes = now.getMinutes();
     
-    // Trading sempre bloqueado até segunda-feira
-    const tradingBlocked = true;
-    const message = 'As operações voltam na segunda-feira';
+    // Verificar se está em horário de funcionamento
+    const tradingBlocked = (dayOfWeek === 0 || dayOfWeek === 6) || 
+                          (dayOfWeek === 1 && hours < 9) || 
+                          (dayOfWeek === 5 && hours >= 18);
+    const message = tradingBlocked ? 'Trading disponível de segunda a sexta, 9h às 18h' : 'Trading ativo';
     
     return {
       currentTime: now.toISOString(),
@@ -62,14 +64,18 @@ export class YieldController {
   @ApiResponse({ status: 400, description: 'Erro na solicitação' })
   async claimYield(@Req() req: any, @Body() body: { scheduleId: number }) {
     try {
-      // Bloquear coleta de rendimentos até segunda-feira
+      // Verificar horário de funcionamento
       const now = new Date();
       const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+      const hours = now.getHours();
       
-      if (dayOfWeek !== 1) { // Se não for segunda-feira
+      // Bloquear apenas em finais de semana e fora do horário comercial
+      if ((dayOfWeek === 0 || dayOfWeek === 6) || 
+          (dayOfWeek === 1 && hours < 9) || 
+          (dayOfWeek === 5 && hours >= 18)) {
         return {
           success: false,
-          message: 'Os rendimentos voltam na segunda-feira'
+          message: 'Trading disponível de segunda a sexta, 9h às 18h'
         };
       }
       

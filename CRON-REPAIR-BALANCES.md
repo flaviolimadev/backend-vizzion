@@ -208,3 +208,4 @@ chmod +x uninstall-cron.sh && ./uninstall-cron.sh
 ```
 
 **Tudo automatizado e pronto para produção!** 🚀✨
+

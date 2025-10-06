@@ -33,3 +33,4 @@ echo "   • Scripts: $(pwd)/scripts/"
 echo "   • Logs: /var/log/vizzionbot/"
 echo "   • Código compilado: $(pwd)/dist/scripts/"
 echo ""
+

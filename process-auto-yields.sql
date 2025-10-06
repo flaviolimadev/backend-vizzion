@@ -127,3 +127,4 @@ DROP TABLE temp_auto_users;
 COMMIT;
 
 \echo '[SUCCESS] Processamento de rendimentos automáticos concluído com sucesso!'
+

@@ -14,3 +14,4 @@ export class SimpleIncreaseContatoLength1734700000001 implements MigrationInterf
     }
 }
 
+

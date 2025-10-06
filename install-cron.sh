@@ -139,3 +139,4 @@ done
 
 echo ""
 echo "✅ Instalação finalizada! O cron está ativo e funcionando."
+
