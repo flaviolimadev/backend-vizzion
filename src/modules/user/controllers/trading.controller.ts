@@ -35,20 +35,7 @@ export class TradingController {
   @ApiOperation({ summary: 'Atualizar modo de trading do usuário' })
   @ApiResponse({ status: 200, description: 'Modo de trading atualizado' })
   async updateTradingMode(@Request() req, @Body() updateTradingModeDto: UpdateTradingModeDto) {
-    // Verificar horário de funcionamento
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
-    const hours = now.getHours();
-    
-    // Bloquear apenas em finais de semana e fora do horário comercial
-    if ((dayOfWeek === 0 || dayOfWeek === 6) || 
-        (dayOfWeek === 1 && hours < 9) || 
-        (dayOfWeek === 5 && hours >= 18)) {
-      return {
-        success: false,
-        message: 'Trading disponível de segunda a sexta, 9h às 18h'
-      };
-    }
+    // Trading sempre ativo - sem verificações de horário
     
     return this.tradingService.updateTradingMode(req.user.sub, updateTradingModeDto.mode);
   }
