@@ -29,6 +29,7 @@ export class OperationService {
       yieldScheduleId: op.yieldScheduleId,
       clickedAt: op.clickedAt,
       operado: op.operado,
+      metadata: op.metadata || null,
       createdAt: op.createdAt,
     }));
   }
@@ -54,6 +55,7 @@ export class OperationService {
       yieldScheduleId: operation.yieldScheduleId,
       clickedAt: operation.clickedAt,
       operado: operation.operado,
+      metadata: operation.metadata || null,
       createdAt: operation.createdAt,
       updatedAt: operation.updatedAt,
     };

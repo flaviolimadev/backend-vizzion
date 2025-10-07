@@ -51,6 +51,18 @@ export class Operation {
   @Column({ name: 'operado', type: 'boolean', default: false })
   operado: boolean;
 
+  @Column({ name: 'metadata', type: 'jsonb', nullable: true })
+  metadata: {
+    operationType?: 'buy' | 'sell';
+    entryPrice?: number;
+    exitPrice?: number;
+    priceChange?: number;
+    profit?: boolean;
+    entryTime?: string;
+    exitTime?: string;
+    processedAt?: string;
+  };
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
