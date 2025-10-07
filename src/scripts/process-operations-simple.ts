@@ -1,36 +1,13 @@
 import 'dotenv/config';
-import { DataSource } from 'typeorm';
+import { Pool } from 'pg';
 import axios from 'axios';
 
-// Definição simplificada da entidade Operation para o script
-class Operation {
-  id: string;
-  userId: string;
-  assetId: string;
-  assetTicker: string;
-  assetDescription: string;
-  assetExchange: string;
-  assetSymbol: string;
-  assetType: string;
-  candlesData: any[];
-  yieldScheduleId: number;
-  clickedAt: Date;
-  operado: boolean;
-  metadata: any;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Configuração do DataSource
-const AppDataSource = new DataSource({
-  type: 'postgres',
+const pool = new Pool({
   host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USERNAME,
+  user: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
-  entities: ['src/modules/user/entities/*.entity.ts'],
-  synchronize: false,
 });
 
 interface Candle {
@@ -48,25 +25,21 @@ interface CandlesResponse {
 }
 
 async function processOperations() {
+  const client = await pool.connect();
+  
   try {
     console.log('🔧 Inicializando processamento de operações...\n');
     
-    await AppDataSource.initialize();
-    console.log('✅ Conexão com banco estabelecida\n');
+    // Buscar operações pendentes
+    const result = await client.query(
+      'SELECT * FROM operations WHERE operado = false ORDER BY clicked_at ASC'
+    );
 
-    const operationRepository = AppDataSource.getRepository(Operation);
-
-    // Buscar operações pendentes (operado = false)
-    const pendingOperations = await operationRepository.find({
-      where: { operado: false },
-      order: { clickedAt: 'ASC' },
-    });
-
+    const pendingOperations = result.rows;
     console.log(`📊 Encontradas ${pendingOperations.length} operações pendentes\n`);
 
     if (pendingOperations.length === 0) {
       console.log('✅ Nenhuma operação pendente para processar');
-      await AppDataSource.destroy();
       return;
     }
 
@@ -76,12 +49,12 @@ async function processOperations() {
     for (const operation of pendingOperations) {
       try {
         console.log(`\n📍 Processando operação ${operation.id}`);
-        console.log(`   Ativo: ${operation.assetTicker}`);
-        console.log(`   Realizada em: ${operation.clickedAt}`);
+        console.log(`   Ativo: ${operation.asset_ticker}`);
+        console.log(`   Realizada em: ${operation.clicked_at}`);
 
         // Buscar candles atuais do ativo
         const response = await axios.get<CandlesResponse>(
-          `https://corretora-app.kl5dxx.easypanel.host/api/assets/${operation.assetId}/candles?timeframe=1m`
+          `https://corretora-app.kl5dxx.easypanel.host/api/assets/${operation.asset_id}/candles?timeframe=1m`
         );
 
         const currentCandles = response.data.candles;
@@ -93,7 +66,7 @@ async function processOperations() {
         }
 
         // Pegar o primeiro candle (momento da operação)
-        const firstCandle = operation.candlesData[0];
+        const firstCandle = operation.candles_data[0];
         // Pegar o candle mais recente (atual)
         const lastCandle = currentCandles[0];
 
@@ -126,12 +99,8 @@ async function processOperations() {
           resultMessage = `VENDA - Lucro de ${Math.abs(priceChange).toFixed(2)}%`;
         }
 
-        // Atualizar a operação
-        operation.candlesData = currentCandles; // Atualizar com candles atuais
-        operation.operado = true;
-        
-        // Adicionar metadados sobre a operação
-        (operation as any).metadata = {
+        // Criar metadados
+        const metadata = {
           operationType,
           entryPrice,
           exitPrice,
@@ -142,7 +111,16 @@ async function processOperations() {
           processedAt: new Date().toISOString(),
         };
 
-        await operationRepository.save(operation);
+        // Atualizar a operação
+        await client.query(
+          `UPDATE operations 
+           SET operado = true, 
+               candles_data = $1, 
+               metadata = $2,
+               updated_at = NOW()
+           WHERE id = $3`,
+          [JSON.stringify(currentCandles), JSON.stringify(metadata), operation.id]
+        );
 
         console.log(`   ✅ ${resultMessage}`);
         console.log(`   💰 Entrada: $${entryPrice.toFixed(5)} → Saída: $${exitPrice.toFixed(5)}`);
@@ -152,7 +130,7 @@ async function processOperations() {
         // Pequeno delay para não sobrecarregar a API
         await new Promise(resolve => setTimeout(resolve, 500));
 
-      } catch (error) {
+      } catch (error: any) {
         console.error(`   ❌ Erro ao processar operação ${operation.id}:`, error.message);
         errorCount++;
       }
@@ -166,12 +144,14 @@ async function processOperations() {
     console.log(`📈 Total: ${pendingOperations.length}`);
     console.log('='.repeat(60) + '\n');
 
-    await AppDataSource.destroy();
     console.log('✅ Processamento concluído!');
 
   } catch (error) {
     console.error('❌ Erro fatal:', error);
     process.exit(1);
+  } finally {
+    client.release();
+    await pool.end();
   }
 }
 
