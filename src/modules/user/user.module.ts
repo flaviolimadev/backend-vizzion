@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
+import { HttpModule } from '@nestjs/axios';
 import { User } from './entities/user.entity';
 import { Plano } from './entities/plano.entity';
 import { YieldSchedule } from './entities/yield-schedule.entity';
@@ -8,6 +9,7 @@ import { Pagamento } from './entities/pagamento.entity';
 import { Extrato } from './entities/extrato.entity';
 import { WebhookLog } from './entities/webhook-log.entity';
 import { Saque } from './entities/saque.entity';
+import { Operation } from './entities/operation.entity';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { PlanoController } from './controllers/plano.controller';
@@ -39,7 +41,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento, Extrato, WebhookLog, Saque]), 
+    TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento, Extrato, WebhookLog, Saque, Operation]), 
+    HttpModule,
     ConfigModule, 
     MailModule,
     MulterModule.register({

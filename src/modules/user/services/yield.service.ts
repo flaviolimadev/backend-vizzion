@@ -5,6 +5,9 @@ import { YieldSchedule } from '../entities/yield-schedule.entity';
 import { User } from '../entities/user.entity';
 import { Extrato } from '../entities/extrato.entity';
 import { ExtratoType } from '../entities/extrato.entity';
+import { Operation } from '../entities/operation.entity';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 export interface YieldScheduleDto {
   id: number;
@@ -24,6 +27,9 @@ export class YieldService {
     private userRepository: Repository<User>,
     @InjectRepository(Extrato)
     private extratoRepository: Repository<Extrato>,
+    @InjectRepository(Operation)
+    private operationRepository: Repository<Operation>,
+    private readonly httpService: HttpService,
   ) {}
 
   async getActiveSchedules(): Promise<YieldScheduleDto[]> {
@@ -67,6 +73,55 @@ export class YieldService {
     
     // Usar percentual fixo (sem randomização)
     return Number((baseAmount * profitPercentage).toFixed(2));
+  }
+
+  private async saveOperation(userId: string, scheduleId: number): Promise<void> {
+    try {
+      // Buscar ativos da API
+      const assetsResponse = await firstValueFrom(
+        this.httpService.get('https://corretora-app.kl5dxx.easypanel.host/api/assets/active?limit=50')
+      );
+      const assetsData = assetsResponse.data;
+      
+      if (!assetsData.assets || assetsData.assets.length === 0) {
+        console.warn('⚠️ Nenhum ativo disponível para salvar operação');
+        return;
+      }
+
+      // Selecionar um ativo aleatório
+      const randomIndex = Math.floor(Math.random() * assetsData.assets.length);
+      const selectedAsset = assetsData.assets[randomIndex];
+
+      // Buscar candles do ativo selecionado
+      const candlesResponse = await firstValueFrom(
+        this.httpService.get(
+          `https://corretora-app.kl5dxx.easypanel.host/api/assets/${selectedAsset.id}/candles?timeframe=1m`
+        )
+      );
+      const candlesData = candlesResponse.data;
+
+      // Criar registro de operação
+      const operation = this.operationRepository.create({
+        userId: userId,
+        assetId: selectedAsset.id,
+        assetTicker: selectedAsset.ticker,
+        assetDescription: selectedAsset.description,
+        assetExchange: selectedAsset.exchange,
+        assetSymbol: selectedAsset.symbol,
+        assetType: selectedAsset.type,
+        candlesData: candlesData.candles || [],
+        yieldScheduleId: scheduleId,
+        clickedAt: new Date(),
+        operado: false,
+      });
+
+      await this.operationRepository.save(operation);
+      
+      console.log(`✅ Operação salva: Ativo ${selectedAsset.ticker} para usuário ${userId}`);
+    } catch (error) {
+      console.error('❌ Erro ao salvar operação:', error);
+      // Não propagar o erro para não bloquear a coleta de rendimento
+    }
   }
 
   async claimYield(userId: string, scheduleId: number): Promise<{ success: boolean; message: string; amount?: number }> {
@@ -135,6 +190,9 @@ export class YieldService {
       });
 
       await this.extratoRepository.save(extrato);
+
+      // Salvar operação com ativo aleatório e candles
+      await this.saveOperation(userId, scheduleId);
 
       console.log(`✅ Rendimento processado: R$ ${yieldAmount.toFixed(2)} adicionado ao balance do usuário ${userId}`);
       
