@@ -22,7 +22,7 @@
     "migration:generate": "npx typeorm migration:generate -d data-source.js",
     "migration:run": "npx typeorm migration:run -d data-source.js",
     "migration:revert": "npx typeorm migration:revert -d data-source.js",
-    "script:repair-balances": "ts-node -r tsconfig-paths/register src/scripts/repair-balances.ts",
+    "script:repair-balances": "./run-repair-balances.sh",
     "script:audit-balances": "ts-node -r tsconfig-paths/register src/scripts/audit-balances.ts",
     "script:clean-duplicates": "ts-node -r tsconfig-paths/register src/scripts/clean-duplicate-extratos.ts",
     "script:reset-repaired": "ts-node -r tsconfig-paths/register src/scripts/reset-repaired-balance.ts"
