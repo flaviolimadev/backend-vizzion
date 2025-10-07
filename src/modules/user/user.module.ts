@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
-import { HttpModule } from '@nestjs/axios';
 import { User } from './entities/user.entity';
 import { Plano } from './entities/plano.entity';
 import { YieldSchedule } from './entities/yield-schedule.entity';
@@ -42,7 +41,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento, Extrato, WebhookLog, Saque, Operation]), 
-    HttpModule,
     ConfigModule, 
     MailModule,
     MulterModule.register({
