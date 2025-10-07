@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
+import { HttpModule } from '@nestjs/axios';
 import { User } from './entities/user.entity';
 import { Plano } from './entities/plano.entity';
 import { YieldSchedule } from './entities/yield-schedule.entity';
@@ -37,10 +38,13 @@ import { MailModule } from '../mail/mail.module';
 import { AdminUserController } from './controllers/admin.user.controller';
 import { AdminController } from './controllers/admin.controller';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { OperationController } from './controllers/operation.controller';
+import { OperationService } from './services/operation.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Plano, YieldSchedule, Pagamento, Extrato, WebhookLog, Saque, Operation]), 
+    HttpModule,
     ConfigModule, 
     MailModule,
     MulterModule.register({
@@ -50,8 +54,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
       },
     }),
   ],
-  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController, SaqueController, AdminUserController, AdminSaqueController, AdminController],
-  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, WebhookPaymentProcessorService, ExtratoService, BonusService, BonusCheckerService, SaqueService, RolesGuard],
+  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController, SaqueController, AdminUserController, AdminSaqueController, AdminController, OperationController],
+  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, WebhookPaymentProcessorService, ExtratoService, BonusService, BonusCheckerService, SaqueService, RolesGuard, OperationService],
   exports: [TypeOrmModule],
 })
 export class UserModule {}

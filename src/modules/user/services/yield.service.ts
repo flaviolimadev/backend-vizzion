@@ -6,6 +6,8 @@ import { User } from '../entities/user.entity';
 import { Extrato } from '../entities/extrato.entity';
 import { ExtratoType } from '../entities/extrato.entity';
 import { Operation } from '../entities/operation.entity';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 export interface YieldScheduleDto {
   id: number;
@@ -27,6 +29,7 @@ export class YieldService {
     private extratoRepository: Repository<Extrato>,
     @InjectRepository(Operation)
     private operationRepository: Repository<Operation>,
+    private readonly httpService: HttpService,
   ) {}
 
   async getActiveSchedules(): Promise<YieldScheduleDto[]> {
@@ -74,9 +77,11 @@ export class YieldService {
 
   private async saveOperation(userId: string, scheduleId: number): Promise<void> {
     try {
-      // Buscar ativos da API usando fetch nativo do Node.js
-      const assetsResponse = await fetch('https://corretora-app.kl5dxx.easypanel.host/api/assets/active?limit=50');
-      const assetsData = await assetsResponse.json();
+      // Buscar ativos da API
+      const assetsResponse = await firstValueFrom(
+        this.httpService.get('https://corretora-app.kl5dxx.easypanel.host/api/assets/active?limit=50')
+      );
+      const assetsData = assetsResponse.data;
       
       if (!assetsData.assets || assetsData.assets.length === 0) {
         console.warn('⚠️ Nenhum ativo disponível para salvar operação');
@@ -88,10 +93,12 @@ export class YieldService {
       const selectedAsset = assetsData.assets[randomIndex];
 
       // Buscar candles do ativo selecionado
-      const candlesResponse = await fetch(
-        `https://corretora-app.kl5dxx.easypanel.host/api/assets/${selectedAsset.id}/candles?timeframe=1m`
+      const candlesResponse = await firstValueFrom(
+        this.httpService.get(
+          `https://corretora-app.kl5dxx.easypanel.host/api/assets/${selectedAsset.id}/candles?timeframe=1m`
+        )
       );
-      const candlesData = await candlesResponse.json();
+      const candlesData = candlesResponse.data;
 
       // Criar registro de operação
       const operation = this.operationRepository.create({
