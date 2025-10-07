@@ -58,8 +58,8 @@ async function processOperations() {
           continue;
         }
 
-        // PRIMEIRO: Pegar o candle do momento da operação (antes de atualizar)
-        const firstCandle = operation.candles_data[0];
+        // PRIMEIRO: Pegar o candle do momento da operação (ÚLTIMO candle do array antigo = mais antigo no tempo)
+        const firstCandle = operation.candles_data[operation.candles_data.length - 1];
         
         if (!firstCandle) {
           console.log(`   ⚠️  Dados de candle inválidos, pulando...`);
@@ -67,11 +67,11 @@ async function processOperations() {
           continue;
         }
 
-        // Preço de entrada (close do primeiro candle - momento da operação)
+        // Preço de entrada (close do candle mais antigo - momento da operação)
         const entryPrice = firstCandle.close;
         
-        // AGORA: Pegar o candle mais recente (dos novos candles da API)
-        const lastCandle = currentCandles[0];
+        // AGORA: Pegar o candle mais recente (ÚLTIMO candle do array novo = mais recente no tempo)
+        const lastCandle = currentCandles[currentCandles.length - 1];
         
         if (!lastCandle) {
           console.log(`   ⚠️  Nenhum candle atual disponível, pulando...`);
@@ -79,7 +79,7 @@ async function processOperations() {
           continue;
         }
         
-        // Preço de saída (close do último candle ATUALIZADO)
+        // Preço de saída (close do candle mais recente ATUALIZADO)
         const exitPrice = lastCandle.close;
 
         // Calcular variação percentual
