@@ -14,7 +14,8 @@ type TemplateName =
   | 'password-changed'
   | 'password-set'
   | 'referral-notification'
-  | 'withdrawal-request';
+  | 'withdrawal-request'
+  | 'live-ops-announcement';
 
 @Injectable()
 export class MailService {

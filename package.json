@@ -26,7 +26,8 @@
     "script:audit-balances": "ts-node -r tsconfig-paths/register src/scripts/audit-balances.ts",
     "script:clean-duplicates": "ts-node -r tsconfig-paths/register src/scripts/clean-duplicate-extratos.ts",
     "script:reset-repaired": "ts-node -r tsconfig-paths/register src/scripts/reset-repaired-balance.ts",
-    "script:process-operations": "node process-operations.js"
+    "script:process-operations": "node process-operations.js",
+    "script:send-live-ops": "node send-live-ops-emails.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.879.0",
