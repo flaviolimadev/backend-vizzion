@@ -19,19 +19,27 @@ async function bootstrap() {
     next();
   });
   
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://localhost:3000',
+    'https://localhost:5173',
+    'https://vizzionbot.pro',
+    process.env.FRONTEND_URL || '',
+    process.env.APP_PUBLIC_URL || '',
+  ].filter(Boolean);
+
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://localhost:3000',
-      'https://localhost:5173',
-      // Adicione aqui os domínios de produção
-      process.env.FRONTEND_URL || 'http://localhost:5173'
-    ],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-    exposedHeaders: ['Authorization', 'Content-Length']
+    exposedHeaders: ['Authorization', 'Content-Length'],
+    optionsSuccessStatus: 204,
   });
 
   // Filtro global para garantir que sempre retornemos JSON
