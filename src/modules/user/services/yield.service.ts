@@ -46,7 +46,7 @@ export class YieldService {
       profitPercentage: Number(schedule.profit_percentage),
       active: schedule.active,
       orderIndex: schedule.order_index,
-      collectionWindowMinutes: schedule.collection_window_minutes,
+      collectionWindowMinutes: schedule.collection_window_minutes || 30,
     }));
   }
 
@@ -62,7 +62,7 @@ export class YieldService {
       profitPercentage: Number(schedule.profit_percentage),
       active: schedule.active,
       orderIndex: schedule.order_index,
-      collectionWindowMinutes: schedule.collection_window_minutes,
+      collectionWindowMinutes: schedule.collection_window_minutes || 30,
     }));
   }
 
