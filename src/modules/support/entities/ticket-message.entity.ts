@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Ticket } from './ticket.entity';
 import { User } from '../../user/entities/user.entity';
 
@@ -10,6 +10,7 @@ export class TicketMessage {
   id: string;
 
   @ManyToOne(() => Ticket, { nullable: false, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'ticket_id' })
   ticket: Ticket;
 
   @Index()
@@ -17,6 +18,7 @@ export class TicketMessage {
   ticket_id: string;
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
   user: User | null;
 
   @Index()
