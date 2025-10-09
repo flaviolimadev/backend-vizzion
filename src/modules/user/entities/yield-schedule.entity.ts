@@ -26,6 +26,9 @@ export class YieldSchedule {
   @Column({ type: 'int', default: 0 })
   order_index: number;
 
+  @Column({ type: 'int', default: 30 })
+  collection_window_minutes: number;
+
   @CreateDateColumn()
   created_at: Date;
 

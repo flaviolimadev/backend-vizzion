@@ -16,6 +16,7 @@ export interface YieldScheduleDto {
   profitPercentage: number;
   active: boolean;
   orderIndex: number;
+  collectionWindowMinutes: number;
 }
 
 @Injectable()
@@ -45,6 +46,7 @@ export class YieldService {
       profitPercentage: Number(schedule.profit_percentage),
       active: schedule.active,
       orderIndex: schedule.order_index,
+      collectionWindowMinutes: schedule.collection_window_minutes,
     }));
   }
 
@@ -60,6 +62,7 @@ export class YieldService {
       profitPercentage: Number(schedule.profit_percentage),
       active: schedule.active,
       orderIndex: schedule.order_index,
+      collectionWindowMinutes: schedule.collection_window_minutes,
     }));
   }
 
