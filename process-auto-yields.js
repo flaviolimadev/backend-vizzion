@@ -12,6 +12,7 @@
  * Uso: node process-auto-yields.js
  */
 
+require('dotenv').config();
 const { Client } = require('pg');
 
 // Configuração do banco de dados
