@@ -7,11 +7,13 @@ import { UserTicketsController } from './user-tickets.controller';
 import { AdminTicketsController } from './admin-tickets.controller';
 import { User } from '../user/entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Ticket, TicketMessage, User]),
     AuthModule,
+    MailModule,
   ],
   controllers: [UserTicketsController, AdminTicketsController],
   providers: [SupportService],
