@@ -54,7 +54,7 @@ async function main() {
       return;
     }
 
-    const YIELD_PERCENTAGE = 1.4; // 1.4%
+    const YIELD_PERCENTAGE = 0.55; // 0.55%
     let processed = 0;
     let totalCredited = 0;
     let errors = 0;
