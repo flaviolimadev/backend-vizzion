@@ -34,20 +34,25 @@ export class YieldService {
   ) {}
 
   async getActiveSchedules(): Promise<YieldScheduleDto[]> {
-    const schedules = await this.yieldScheduleRepository.find({
-      where: { active: true },
-      order: { order_index: 'ASC' },
-    });
+    try {
+      const schedules = await this.yieldScheduleRepository.find({
+        where: { active: true },
+        order: { order_index: 'ASC' },
+      });
 
-    return schedules.map(schedule => ({
-      id: schedule.id,
-      startTime: schedule.start_time,
-      endTime: schedule.end_time,
-      profitPercentage: Number(schedule.profit_percentage),
-      active: schedule.active,
-      orderIndex: schedule.order_index,
-      collectionWindowMinutes: schedule.collection_window_minutes || 30,
-    }));
+      return schedules.map(schedule => ({
+        id: schedule.id,
+        startTime: schedule.start_time,
+        endTime: schedule.end_time,
+        profitPercentage: Number(schedule.profit_percentage),
+        active: schedule.active,
+        orderIndex: schedule.order_index,
+        collectionWindowMinutes: schedule.collection_window_minutes || 30,
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar schedules ativos:', error);
+      return [];
+    }
   }
 
   async getAllSchedules(): Promise<YieldScheduleDto[]> {

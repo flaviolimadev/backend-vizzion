@@ -14,7 +14,13 @@ export class YieldController {
   @ApiOperation({ summary: 'Obter horários ativos de rendimentos' })
   @ApiResponse({ status: 200, description: 'Lista de horários de rendimentos ativos' })
   async getYieldSchedule(): Promise<YieldScheduleDto[]> {
-    return this.yieldService.getActiveSchedules();
+    try {
+      return await this.yieldService.getActiveSchedules();
+    } catch (error) {
+      console.error('Erro ao buscar yield schedules:', error);
+      // Retornar array vazio em caso de erro para não quebrar o frontend
+      return [];
+    }
   }
 
   @Get('schedule/all')
