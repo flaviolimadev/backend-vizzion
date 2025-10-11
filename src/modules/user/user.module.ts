@@ -40,6 +40,8 @@ import { AdminController } from './controllers/admin.controller';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { OperationController } from './controllers/operation.controller';
 import { OperationService } from './services/operation.service';
+import { AdminReportsController } from './controllers/admin-reports.controller';
+import { AdminReportsService } from './services/admin-reports.service';
 
 @Module({
   imports: [
@@ -54,8 +56,8 @@ import { OperationService } from './services/operation.service';
       },
     }),
   ],
-  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController, SaqueController, AdminUserController, AdminSaqueController, AdminController, OperationController],
-  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, WebhookPaymentProcessorService, ExtratoService, BonusService, BonusCheckerService, SaqueService, RolesGuard, OperationService],
+  controllers: [UserController, PlanoController, TradingController, YieldController, WalletController, PaymentController, ExtratoController, SaqueController, AdminUserController, AdminSaqueController, AdminController, OperationController, AdminReportsController],
+  providers: [UserService, AvatarService, PlanoService, TradingService, YieldService, WalletService, PaymentService, PaymentCheckerService, WebhookService, WebhookPaymentProcessorService, ExtratoService, BonusService, BonusCheckerService, SaqueService, RolesGuard, OperationService, AdminReportsService],
   exports: [TypeOrmModule],
 })
 export class UserModule {}
