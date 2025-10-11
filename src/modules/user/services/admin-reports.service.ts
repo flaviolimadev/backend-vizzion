@@ -90,7 +90,7 @@ export class AdminReportsService {
         userName: extrato.user ? `${extrato.user.nome} ${extrato.user.sobrenome}` : 'Usuário não encontrado',
         userEmail: extrato.user?.email || 'Email não encontrado',
         amount: safeAmount,
-        type: extrato.type === ExtratoType.INVESTMENT ? 'license' : 'deposit',
+        type: (extrato.type === ExtratoType.INVESTMENT ? 'license' : 'deposit') as 'deposit' | 'license',
         description: extrato.description || '',
         status: extrato.status === ExtratoStatus.COMPLETED ? 'Aprovado' : 
                 extrato.status === ExtratoStatus.PENDING ? 'Pendente' : 'Cancelado',
