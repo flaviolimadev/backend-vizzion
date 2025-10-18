@@ -28,6 +28,7 @@
     "script:reset-repaired": "ts-node -r tsconfig-paths/register src/scripts/reset-repaired-balance.ts",
     "script:process-operations": "node process-operations.js",
     "script:send-live-ops": "node send-live-ops-emails.js",
+    "script:send-whatsapp-group": "node send-whatsapp-group-emails.js",
     "script:auto-yields": "node process-auto-yields.js"
   },
   "dependencies": {

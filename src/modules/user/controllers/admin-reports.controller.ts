@@ -20,3 +20,4 @@ export class AdminReportsController {
     return this.adminReportsService.getDepositsReport(startDate, endDate);
   }
 }
+

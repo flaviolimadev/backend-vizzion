@@ -15,7 +15,8 @@ type TemplateName =
   | 'password-set'
   | 'referral-notification'
   | 'withdrawal-request'
-  | 'live-ops-announcement';
+  | 'live-ops-announcement'
+  | 'whatsapp-group-announcement';
 
 @Injectable()
 export class MailService {

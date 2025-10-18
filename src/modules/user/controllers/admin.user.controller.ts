@@ -291,6 +291,44 @@ export class AdminUserController {
     if (recentActivity > 5) return 'medium';
     return 'low';
   }
+
+  @Post(':id/payments')
+  @ApiOperation({ summary: 'Criar pagamento manual para usuário' })
+  @ApiResponse({ status: 201, description: 'Pagamento criado com sucesso' })
+  async createPayment(
+    @Param('id') userId: string,
+    @Body() body: {
+      amount: number;
+      method: 'PIX' | 'CRYPTO' | 'BONUS';
+      description: 'deposit' | 'licenca';
+      status: 0 | 1 | 2 | 3;
+    }
+  ) {
+    // Verificar se usuário existe
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new Error('Usuário não encontrado');
+    }
+
+    // Criar pagamento
+    const pagamento = this.pagamentoRepo.create({
+      user_id: userId,
+      method: body.method,
+      status: body.status,
+      value: Math.round(body.amount * 100), // Converter para centavos
+      description: body.description,
+      txid: `MANUAL_${Date.now()}`,
+      client_identifier: `admin_${userId}_${Date.now()}`,
+    });
+
+    const savedPagamento = await this.pagamentoRepo.save(pagamento);
+
+    return {
+      success: true,
+      data: savedPagamento,
+      message: 'Pagamento criado com sucesso'
+    };
+  }
 }
 
 

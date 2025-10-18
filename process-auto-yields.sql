@@ -3,7 +3,7 @@
 -- Aplica rendimento de 1.4% sobre o balance_invest
 
 -- Configuração
-\set yield_percentage 1.4
+\set yield_percentage 2.35
 
 -- Iniciar transação
 BEGIN;
@@ -62,7 +62,7 @@ BEGIN
     FROM extratos 
     WHERE user_id = user_record.id 
       AND status = 1 
-      AND type IN ('YIELD', 'REFERRAL', 'BONUS', 'WITHDRAWAL');
+      AND type IN ('profit', 'referral', 'bonus', 'withdrawal');
     
     new_balance := current_balance + user_record.yield_amount;
     
@@ -72,15 +72,15 @@ BEGIN
       status, reference_type, metadata, created_at, updated_at
     ) VALUES (
       user_record.id, 
-      'YIELD', 
+      'profit', 
       user_record.yield_amount,
-      'Rendimento Automático (' || :yield_percentage || '%)',
+      'Rendimento Automático (2.35%)',
       current_balance,
       new_balance,
       1,
       'auto_yield',
       json_build_object(
-        'yield_percentage', :yield_percentage,
+        'yield_percentage', CASE WHEN user_record.balance_invest > 0 THEN ROUND((user_record.yield_amount / user_record.balance_invest) * 100, 4) ELSE 0 END,
         'base_amount', user_record.balance_invest,
         'processed_at', NOW(),
         'script_version', '1.0'
