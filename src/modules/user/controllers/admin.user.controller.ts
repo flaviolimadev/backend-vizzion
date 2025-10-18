@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { Extrato } from '../entities/extrato.entity';
 import { Saque } from '../entities/saque.entity';
-import { Pagamento } from '../entities/pagamento.entity';
+import { Pagamento, PaymentMethod, PaymentStatus } from '../entities/pagamento.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -310,10 +310,17 @@ export class AdminUserController {
       throw new Error('Usuário não encontrado');
     }
 
+    // Mapear string para enum PaymentMethod
+    const methodMap: Record<string, PaymentMethod> = {
+      'PIX': PaymentMethod.PIX,
+      'CRYPTO': PaymentMethod.CRYPTO,
+      'BONUS': PaymentMethod.BONUS
+    };
+
     // Criar pagamento
     const pagamento = this.pagamentoRepo.create({
       user_id: userId,
-      method: body.method,
+      method: methodMap[body.method],
       status: body.status,
       value: Math.round(body.amount * 100), // Converter para centavos
       description: body.description,
