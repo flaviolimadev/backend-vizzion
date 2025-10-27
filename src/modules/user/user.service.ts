@@ -445,7 +445,7 @@ export class UserService {
   }
 
   async getLicenseSales(userId: string) {
-    // Buscar todos os usuários que este usuário indicou e que têm plano diferente de 0
+    // Buscar todos os usuários que este usuário indicou diretamente
     const referredUsers = await this.repo.find({
       where: { referred_at: userId },
       select: ['id', 'nome', 'sobrenome', 'email', 'plano', 'created_at'],
@@ -466,29 +466,35 @@ export class UserService {
       10: 20000 // Plano VIP (R$ 20.000,00)
     };
 
-    // Calcular vendas totais
+    // Filtrar vendas a partir de hoje (00:00:00)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const salesFromToday = referredUsers.filter(user => 
+      user.created_at >= today && user.plano && user.plano > 0
+    );
+
+    // Calcular vendas totais apenas de licenças compradas hoje
     let totalSales = 0;
     const salesDetails = [];
 
-    for (const user of referredUsers) {
-      if (user.plano && user.plano > 0) {
-        const planValue = planValues[user.plano] || 0;
-        totalSales += planValue;
-        
-        salesDetails.push({
-          userId: user.id,
-          nome: user.nome,
-          sobrenome: user.sobrenome,
-          email: user.email,
-          plano: user.plano,
-          valor: planValue,
-          created_at: user.created_at
-        });
-      }
+    for (const user of salesFromToday) {
+      const planValue = planValues[user.plano] || 0;
+      totalSales += planValue;
+      
+      salesDetails.push({
+        userId: user.id,
+        nome: user.nome,
+        sobrenome: user.sobrenome,
+        email: user.email,
+        plano: user.plano,
+        valor: planValue,
+        created_at: user.created_at
+      });
     }
 
-    // Meta da promoção: R$ 30.000
-    const targetAmount = 30000;
+    // Meta da nova promoção: R$ 10.000 (apenas vendas diretas de licenças)
+    const targetAmount = 10000;
     const progressPercentage = Math.min((totalSales / targetAmount) * 100, 100);
 
     return {

@@ -99,3 +99,6 @@ async function sendWhatsAppGroupAnnouncement() {
 
 // Executar o script
 sendWhatsAppGroupAnnouncement();
+
+
+
