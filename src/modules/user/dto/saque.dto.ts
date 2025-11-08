@@ -10,7 +10,8 @@ export enum SaqueType {
 export enum KeyType {
   CPF = 'cpf',
   EMAIL = 'email',
-  CONTATO = 'contato'
+  CONTATO = 'contato',
+  USDT = 'usdt'
 }
 
 export class CreateSaqueDto {
@@ -19,24 +20,24 @@ export class CreateSaqueDto {
   @IsNotEmpty({ message: 'Tipo de saque é obrigatório' })
   type: SaqueType;
 
-  @ApiProperty({ description: 'Valor do saque (mínimo R$ 10,00)', minimum: 10 })
+  @ApiProperty({ description: 'Valor do saque (mínimo R$ 100,00)', minimum: 100 })
   @Type(() => Number)
   @IsNumber({}, { message: 'Amount deve ser um número' })
-  @Min(10, { message: 'Valor mínimo é R$ 10,00' })
+  @Min(100, { message: 'Valor mínimo é R$ 100,00' })
   amount: number;
 
-  @ApiProperty({ description: 'CPF do usuário', maxLength: 20 })
+  @ApiProperty({ description: 'CPF do usuário (obrigatório apenas para PIX)', maxLength: 20, required: false })
   @IsString({ message: 'CPF deve ser uma string' })
-  @IsNotEmpty({ message: 'CPF é obrigatório' })
+  @IsOptional()
   @MaxLength(20, { message: 'CPF deve ter no máximo 20 caracteres' })
-  cpf: string;
+  cpf?: string;
 
   @ApiProperty({ enum: KeyType, description: 'Tipo da chave de pagamento' })
-  @IsEnum(KeyType, { message: 'Tipo de chave deve ser cpf, email ou contato' })
+  @IsEnum(KeyType, { message: 'Tipo de chave deve ser cpf, email, contato ou usdt' })
   @IsNotEmpty({ message: 'Tipo de chave é obrigatório' })
   key_type: KeyType;
 
-  @ApiProperty({ description: 'Valor da chave (CPF, email ou contato)', maxLength: 100 })
+  @ApiProperty({ description: 'Valor da chave (CPF, email, contato ou carteira USDT)', maxLength: 100 })
   @IsString({ message: 'Chave deve ser uma string' })
   @IsNotEmpty({ message: 'Chave é obrigatória' })
   @MaxLength(100, { message: 'Chave deve ter no máximo 100 caracteres' })

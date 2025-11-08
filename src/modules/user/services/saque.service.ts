@@ -42,8 +42,8 @@ export class SaqueService {
       throw new BadRequestException(`Você precisa ter ${balanceType} para realizar saques.`);
     }
 
-    if (amount < 10) {
-      throw new BadRequestException('Saque mínimo é de R$ 10,00');
+    if (amount < 100) {
+      throw new BadRequestException('Saque mínimo é de R$ 100,00');
     }
 
     // Validar tipo de saque
@@ -72,6 +72,19 @@ export class SaqueService {
       if (cleanPhone.length < 10 || cleanPhone.length > 13) {
         throw new BadRequestException('Telefone deve ter entre 10 e 13 dígitos');
       }
+    } else if (key_type === KeyType.USDT) {
+      // Validar endereço USDT BEP20 (começa com 0x e tem 42 caracteres)
+      const usdtRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!usdtRegex.test(key_value)) {
+        throw new BadRequestException('Endereço USDT BEP20 inválido. Use endereço iniciando com 0x e 40 dígitos hexadecimais.');
+      }
+    }
+
+    // Validar CPF apenas para métodos que não sejam USDT
+    if (key_type !== KeyType.USDT) {
+      if (!cpf || cpf.trim() === '') {
+        throw new BadRequestException('CPF é obrigatório para saques via PIX');
+      }
     }
 
     // Calcular taxa baseada no tipo
@@ -92,7 +105,7 @@ export class SaqueService {
       tax,
       final_amount: finalAmount,
       status: SaqueStatus.PENDING,
-      cpf,
+      cpf: cpf || null, // CPF pode ser null para USDT
       key_type,
       key_value,
       notes

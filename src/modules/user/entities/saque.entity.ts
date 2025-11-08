@@ -16,7 +16,8 @@ export enum SaqueType {
 export enum KeyType {
   CPF = 'cpf',
   EMAIL = 'email',
-  CONTATO = 'contato'
+  CONTATO = 'contato',
+  USDT = 'usdt'
 }
 
 @Entity('saques')
@@ -49,8 +50,8 @@ export class Saque {
   })
   status: SaqueStatus;
 
-  @Column({ type: 'varchar', length: 20 })
-  cpf: string; // CPF do usuário
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  cpf: string | null; // CPF do usuário (opcional para USDT)
 
   @Column({
     type: 'enum',
